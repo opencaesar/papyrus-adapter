@@ -1,0 +1,12 @@
+apply plugin: 'application'
+
+ext.title = 'Oml to Papyrus'
+description = 'Oml to Papyrus Interface'
+mainClassName = 'io.opencaesar.oml2papyrus.Oml2PapyrusApp'
+applicationName = 'oml2papyrus'
+
+dependencies {
+ 	implementation 'xml-resolver:xml-resolver:1.2'
+
+    implementation "io.opencaesar.oml:io.opencaesar.oml.dsl:${versions.oml}"
+}

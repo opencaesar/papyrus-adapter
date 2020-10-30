@@ -1,0 +1,17 @@
+language: java
+install: true
+
+jdk:
+- openjdk11
+
+script:
+  - ./gradlew build
+
+deploy:
+  - provider: script
+    script: ./gradlew bintrayUpload
+    skip_cleanup: true
+    dry-run: false
+    on:
+      tags: true
+      branch: master

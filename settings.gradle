@@ -1,0 +1,4 @@
+include 'oml2papyrus'
+include 'oml2papyrus-gradle'
+include 'papyrus2oml'
+include 'papyrus2oml-gradle'

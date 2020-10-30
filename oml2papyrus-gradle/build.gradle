@@ -1,0 +1,7 @@
+ext.title = 'Oml to Papyrus Gradle'
+description = 'A gradle interface to run Oml to Papyrus'
+
+dependencies {
+	implementation gradleApi()
+    implementation project (':oml2papyrus')
+}
