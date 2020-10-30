@@ -1,6 +1,6 @@
 # Oml2Papyrus
 
-A tool that translates [OML](https://opencaesar.github.io/oml-spec) ontologies to [Papyrus](https://www.eclipse.org/papyrus/) models
+A tool that translates [OML](https://opencaesar.github.io/oml) ontologies to [Papyrus](https://www.eclipse.org/papyrus/) models
 
 ## Run as CLI
 

@@ -24,8 +24,8 @@ Windows
 
 ## [OML to Papyrus](oml2papyrus/README.md)
 
-A tool that translates [OML](https://opencaesar.github.io/oml-spec) ontologies to [Papyrus](https://www.eclipse.org/papyrus/) models
+A tool that translates [OML](https://opencaesar.github.io/oml) ontologies to [Papyrus](https://www.eclipse.org/papyrus/) models
 
 ## [Papyrus to OML](oml2papyrus/README.md)
 
-A tool that translates [Papyrus](https://www.eclipse.org/papyrus/) models to [OML](https://opencaesar.github.io/oml-spec) ontologies
+A tool that translates [Papyrus](https://www.eclipse.org/papyrus/) models to [OML](https://opencaesar.github.io/oml) ontologies
