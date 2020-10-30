@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/opencaesar/papyrus-adapter.svg?branch=master)](https://travis-ci.org/opencaesar/papyrus-adapter)
 
-An [OML](https://opencaesar.github.io/oml-spec) adapter for [Papyrus](https://www.eclipse.org/papyrus/) modeling tool
+An [OML](https://opencaesar.github.io/oml) adapter for [Papyrus](https://www.eclipse.org/papyrus/) modeling tool
 
 ## Clone
 ```
