@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,22 +30,32 @@ import io.opencaesar.oml.util.OmlWriter;
 
 public class Papyrus2OmlApp {
 
-	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"txt", "pdf"});
+	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"uml"});
 
 	@Parameter(
 		names= {"--input-folder-path","-i"}, 
 		description="Path to the input folder (Required)",
 		validateWith=InputFolderPath.class, 
 		required=true, 
-		order=1)
+		order=1
+	)
 	private String inputFolderPath = null;
+
+	@Parameter(
+			names= {"--input-model-path","-r"}, 
+			description="Path to the root UML2 model file (Required)",
+			validateWith=InputFilePath.class, 
+			required=true, 
+			order=2
+	)
+	private String inputModelPath = null;
 
 	@Parameter(
 		names= {"--output-catalog-path", "-o"}, 
 		description="Path to the output OML catalog file (Required)", 
 		validateWith=CatalogPath.class, 
 		required=true, 
-		order=2
+		order=3
 	)
 	private String outputCatalogPath;
 		
@@ -113,21 +122,14 @@ public class Papyrus2OmlApp {
 		final OmlWriter writer = new OmlWriter(omlResourceSet);
 		writer.start();
 		
-		// collect the input files
+		// create the input folder and files
 		final File inputFolder = new File(inputFolderPath);
-		final Collection<File> inputFiles = collectInputFiles(inputFolder);
+		final File inputModelFile = new File(inputModelPath);
 		
-		// iterate over the input files to convert them to Oml resources
-		for (File inputFile : inputFiles) {
+		// Convert the input model to OML resources
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputFolder, inputModelFile, catalog, writer, LOGGER);
+		omlResources.addAll(converter.convert());
 
-			// read the input file
-			LOGGER.info("Reading: "+inputFile);
-
-			// Convert the input file to OML resources
-			Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputFolder, inputFile, catalog, writer, LOGGER);
-			omlResources.addAll(converter.convert());
-		}
-		
 		// finish the Oml writer
 		writer.finish();
 		
@@ -144,28 +146,6 @@ public class Papyrus2OmlApp {
 
 	// Utility methods
 	
-	private Collection<File> collectInputFiles(File directory) {
-		final List<File> inputFiles = new ArrayList<File>();
-		for (File file : directory.listFiles()) {
-			if (file.isFile()) {
-				if (INPUT_EXTENSIONS.contains(getFileExtension(file))) {
-					inputFiles.add(file);
-				}
-			} else if (file.isDirectory()) {
-				inputFiles.addAll(collectInputFiles(file));
-			}
-		}
-		return inputFiles;
-	}
-
-	private String getFileExtension(File file) {
-        final String fileName = file.getName();
-        if(fileName.lastIndexOf(".") != -1)
-        	return fileName.substring(fileName.lastIndexOf(".")+1);
-        else 
-        	return "";
-    }
-
 	/**
 	 * Get application version id from properties file.
 	 * @return version string from build.properties or UNKNOWN
@@ -188,7 +168,17 @@ public class Papyrus2OmlApp {
 		public void validate(String name, String value) throws ParameterException {
 			final File directory = new File(value);
 			if (!directory.isDirectory()) {
-				throw new ParameterException("Parameter " + name + " should be a valid folder path");
+				throw new ParameterException("Argument " + value + " should be a valid folder path");
+			}
+	  	}
+	}
+
+	static public class InputFilePath implements IParameterValidator {
+		@Override
+		public void validate(String name, String value) throws ParameterException {
+			final File file = new File(value);
+			if (!file.exists()) {
+				throw new ParameterException("Argument " + value + " should be a valid Papyrus UML2 file path");
 			}
 	  	}
 	}
@@ -198,7 +188,7 @@ public class Papyrus2OmlApp {
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
 			if (!file.getName().endsWith("catalog.xml")) {
-				throw new ParameterException("Parameter " + name + " should be a valid OML catalog path");
+				throw new ParameterException("Argument " + value + " should be a valid OML catalog path");
 			}
 		}
 		

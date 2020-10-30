@@ -15,6 +15,7 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.apache.log4j.xml.DOMConfigurator;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
@@ -35,6 +36,8 @@ import io.opencaesar.oml.util.OmlXMIResourceFactory;
 
 public class Oml2PapyrusApp {
 
+	private static final String OML_EXTENSION = "oml";
+	private static final String OML_XMI_EXTENSION = "omlxmi";
 	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"txt", "pdf"});
 
 	@Parameter(
@@ -47,16 +50,15 @@ public class Oml2PapyrusApp {
 	private String inputCatalogPath;
 
 	@Parameter(
-			names= {"--input-ontology-path", "-r"}, 
-			description="Path to the input OML ontology (Required)", 
-			validateWith=InputFilePath.class, 
+			names= {"--input-ontology-iri", "-r"}, 
+			description="IRI of the input OML ontology (Required)", 
 			required=true, 
 			order=2
 	)
-	private String inputOntologyPath;
+	private String inputOntologyIri;
 
 	@Parameter(
-		names= {"--input-folder-path","-i"}, 
+		names= {"--output-folder-path","-o"}, 
 		description="Path to the output papyrus folder (Required)",
 		validateWith=OutputFolderPath.class, 
 		required=true, 
@@ -79,7 +81,11 @@ public class Oml2PapyrusApp {
 	) 
 	private boolean help;
 
-	private Logger LOGGER = LogManager.getLogger(Oml2PapyrusApp.class);
+    private final static Logger LOGGER = Logger.getLogger(Oml2PapyrusApp.class);
+
+    static {
+        DOMConfigurator.configure(ClassLoader.getSystemClassLoader().getResource("log4j.xml"));
+    }
 
 	/*
 	 * Main method
@@ -111,7 +117,7 @@ public class Oml2PapyrusApp {
 		LOGGER.info("                      Oml to Papyrus "+getAppVersion());
 		LOGGER.info("=================================================================");
 		LOGGER.info("Input Catalog Path= " + inputCatalogPath);
-		LOGGER.info("Input Ontology Path= " + inputOntologyPath);
+		LOGGER.info("Input Ontology Iri= " + inputOntologyIri);
 		LOGGER.info("Output Folder Path= " + outputFolderPath);
 		
 		// load the Oml language
@@ -125,8 +131,18 @@ public class Oml2PapyrusApp {
 		final URL catalogURL = new File(inputCatalogPath).toURI().toURL();
 		final OmlCatalog catalog = OmlCatalog.create(catalogURL);
 		
-		// load the root ontology from its URI
-		final URI ontologyUri = URI.createFileURI(inputOntologyPath);
+		// find the root ontology given its URI
+		final URI baseIri = URI.createURI(catalog.resolveURI(inputOntologyIri));
+		final URI ontologyUri;
+		if (new File(baseIri.toFileString()+"."+OML_EXTENSION).exists()) {
+			ontologyUri = URI.createURI(baseIri+"."+OML_EXTENSION);
+		} else if (new File(baseIri.toFileString()+"."+OML_XMI_EXTENSION).exists()) {
+			ontologyUri = URI.createURI(baseIri+"."+OML_XMI_EXTENSION);
+		} else {
+			throw new RuntimeException("Ontology with iri '"+"' cannot be found in the catalog");
+		}
+		
+		// load the root ontology
 		final Resource ontologyResource = omlResourceSet.getResource(ontologyUri, true); 
 		final Ontology rootOntology = OmlRead.getOntology(ontologyResource);
 
@@ -180,16 +196,6 @@ public class Oml2PapyrusApp {
 			}
 		}
 		
-	}
-
-	static public class InputFilePath implements IParameterValidator {
-		@Override
-		public void validate(String name, String value) throws ParameterException {
-			final File file = new File(value);
-			if (!file.exists()) {
-				throw new ParameterException("Parameter " + name + " should be a valid file path");
-			}
-	  	}
 	}
 
 	static public class OutputFolderPath implements IParameterValidator {

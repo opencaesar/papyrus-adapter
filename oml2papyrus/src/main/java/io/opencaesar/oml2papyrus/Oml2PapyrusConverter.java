@@ -14,8 +14,6 @@ import io.opencaesar.oml.util.OmlRead;
 
 public class Oml2PapyrusConverter {
 
-	private static final String OML_EXTENSION = "oml";
-
 	private Ontology rootOntology;
 	private OmlCatalog catalog;
 	private File papyrusFolder;

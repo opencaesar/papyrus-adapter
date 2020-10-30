@@ -7,32 +7,30 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.TaskExecutionException;
 
-import io.opencaesar.oml2papyrus.Oml2PapyrusApp;
-
 public class Oml2PapyrusTask extends DefaultTask {
 	
-	public String inputFolderPath = null;
+	public String inputCatalogPath = null;
 
 	public String inputOntologyPath = null;
 
-	public String outputCatalogPath = null;
+	public String outputFolderPath = null;
 	
 	public boolean debug;
 
     @TaskAction
     public void run() {
         List<String> args = new ArrayList<String>();
-        if (inputFolderPath != null) {
+        if (inputCatalogPath != null) {
 		    args.add("-i");
-		    args.add(inputFolderPath);
+		    args.add(inputCatalogPath);
         }
         if (inputOntologyPath != null) {
 		    args.add("-r");
 		    args.add(inputOntologyPath);
         }
-        if (outputCatalogPath != null) {
+        if (outputFolderPath != null) {
 		    args.add("-o");
-		    args.add(outputCatalogPath);
+		    args.add(outputFolderPath);
         }
 	    if (debug) {
 		    args.add("-d");
