@@ -5,10 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -38,7 +35,6 @@ public class Oml2PapyrusApp {
 
 	private static final String OML_EXTENSION = "oml";
 	private static final String OML_XMI_EXTENSION = "omlxmi";
-	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"txt", "pdf"});
 
 	@Parameter(
 			names= {"--input-catalog-path", "-i"}, 
@@ -152,16 +148,13 @@ public class Oml2PapyrusApp {
 		// Papyrus folder
 		File papyrusFolder = new File(outputFolderPath);
 
-		// Convert the input ontology to Papyrus resources
+		// Convert the input ontology to Papyrus resource
 		Oml2PapyrusConverter converter = new Oml2PapyrusConverter(rootOntology, catalog, papyrusFolder, papyrusResourceSet, LOGGER);
-		List<Resource> papyrusResources = new ArrayList<>();
-		papyrusResources.addAll(converter.convert());
+		Resource resource = converter.convert();
 				
-		// save the Papyrus resources
-		for (Resource resource : papyrusResources) {
-			LOGGER.info("Saving: "+resource.getURI());
-			resource.save(Collections.EMPTY_MAP);
-		}
+		// save the Papyrus resource
+		LOGGER.info("Saving: "+resource.getURI());
+		resource.save(Collections.EMPTY_MAP);
 
 		LOGGER.info("=================================================================");
 		LOGGER.info("                          E N D");
