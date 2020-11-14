@@ -108,23 +108,4 @@ public class Oml2PapyrusConverter {
 		return profile.eResource();
 	}
 	
-	/*public static void main(String[] args) throws IOException {
-		System.out.println("Test");
-		Model uml2Model = ProfileUtils.getUML2Model();
-		System.out.println(uml2Model.getName());
-		final Profile sampleProfile = UMLFactory.eINSTANCE.createProfile();
-		sampleProfile.setName("Sample Profile");
-		final Stereotype testStereoType = 
-				ProfileUtils.createStereotype(sampleProfile,
-												 "TestStereoType",
-												 false,
-												 uml2Model,
-												 UMLPackage.Literals.CLASS.getName(),
-												 UMLPackage.Literals.GENERALIZATION.getName());
-		System.out.println(testStereoType.getExtendedMetaclasses());
-		ResourceSet rSet = new ResourceSetImpl();
-		Resource profileResrouce = rSet.createResource(URI.createFileURI("testProfile.uml"));
-		profileResrouce.getContents().add(sampleProfile);
-		profileResrouce.save(null);
-	}*/
 }

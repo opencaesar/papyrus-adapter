@@ -53,6 +53,8 @@ public class ProfileUtils {
 			PackageImport primitiveTypesLibraryImport = UMLFactory.eINSTANCE.createPackageImport();
 			primitiveTypesLibraryImport.setImportedPackage(getPrimitiveTypesLibrary(resourceSet));
 			profile.getPackageImports().add(primitiveTypesLibraryImport);
+			
+			profile.define();
 
 			return profile;
 		}
