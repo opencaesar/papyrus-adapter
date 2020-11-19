@@ -1,6 +1,6 @@
 package io.opencaesar.oml2papyrus.util;
 
-import java.util.List;
+import java.util.Collection;
 
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -62,7 +62,7 @@ public class ProfileUtils {
 	}
 
 	public static Package createPackage(Profile profile, String packageName) {
-		Package package_ = UMLFactory.eINSTANCE.createProfile();
+		Package package_ = UMLFactory.eINSTANCE.createPackage();
 		package_.setName(packageName);
 		profile.getPackagedElements().add(package_);
 		return package_;
@@ -72,7 +72,7 @@ public class ProfileUtils {
 		return package_.createOwnedClass(className, isAbstract);
 	}
 
-	public static Stereotype createStereotype(Package package_, String name, boolean isAbstract, List<String> metaClassNames) {
+	public static Stereotype createStereotype(Package package_, String name, boolean isAbstract, Collection<String> metaClassNames) {
 		final Stereotype createdST = package_.createOwnedStereotype(name, isAbstract);
 		if (metaClassNames != null && metaClassNames.size() > 0) {
 			Model umlMetamodel = getUMLMetamodel(package_.eResource().getResourceSet());
