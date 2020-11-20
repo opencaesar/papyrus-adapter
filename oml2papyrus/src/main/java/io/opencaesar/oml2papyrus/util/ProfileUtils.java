@@ -54,8 +54,6 @@ public class ProfileUtils {
 			primitiveTypesLibraryImport.setImportedPackage(getPrimitiveTypesLibrary(resourceSet));
 			profile.getPackageImports().add(primitiveTypesLibraryImport);
 			
-			profile.define();
-
 			return profile;
 		}
 		return null;

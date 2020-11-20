@@ -85,6 +85,9 @@ public class Oml2PapyrusConverter {
 		 * type instanceof Aspect); } // return the created Papyrus resources
 		 */
 
+		// define the profile after all elements have been created
+		profile.define();
+		
 		return profile.eResource();
 	}
 
