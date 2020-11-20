@@ -39,11 +39,12 @@ public class ProfileUtils {
 		return null;
 	}
 
-	public static Profile createProfile(ResourceSet resourceSet, URI profileUri, String profileName) {
+	public static Profile createProfile(ResourceSet resourceSet, URI profileUri, String profileName, String profileURI) {
 		Resource resource = resourceSet.createResource(profileUri);
 		if (resource != null) {
 			Profile profile = UMLFactory.eINSTANCE.createProfile();
 			profile.setName(profileName);
+			profile.setURI(profileURI);
 			resource.getContents().add(profile);
 			
 			// create a PackageImport for UML and treat it as a metamodel reference
@@ -59,9 +60,10 @@ public class ProfileUtils {
 		return null;
 	}
 
-	public static Package createPackage(Profile profile, String packageName) {
+	public static Package createPackage(Profile profile, String packageName, String packageURI) {
 		Package package_ = UMLFactory.eINSTANCE.createPackage();
 		package_.setName(packageName);
+		package_.setURI(packageURI);
 		profile.getPackagedElements().add(package_);
 		return package_;
 	}

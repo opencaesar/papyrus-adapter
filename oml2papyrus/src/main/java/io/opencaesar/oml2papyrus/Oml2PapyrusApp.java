@@ -149,7 +149,7 @@ public class Oml2PapyrusApp {
 		File papyrusFolder = new File(outputFolderPath);
 
 		// Convert the input ontology to Papyrus resource
-		Oml2PapyrusConverter converter = new Oml2PapyrusConverter(rootOntology, catalog, papyrusFolder, papyrusResourceSet, LOGGER);
+		Oml2PapyrusConverter converter = new Oml2PapyrusConverter(rootOntology, papyrusFolder, papyrusResourceSet, LOGGER);
 		Resource resource = converter.convert();
 				
 		// save the Papyrus resource

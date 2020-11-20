@@ -14,9 +14,9 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Profile;
+import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
 import io.opencaesar.oml.Annotation;
@@ -26,7 +26,6 @@ import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.QuotedLiteral;
 import io.opencaesar.oml.Vocabulary;
-import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
@@ -37,15 +36,12 @@ public class Oml2PapyrusConverter {
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
 	private Ontology rootOntology;
-	private OmlCatalog catalog;
 	private File papyrusFolder;
 	private ResourceSet papyrusResourceSet;
 	private Logger logger;
 
-	public Oml2PapyrusConverter(Ontology rootOntology, OmlCatalog catalog, File papyrusFolder,
-			ResourceSet papyrusResourceSet, Logger logger) {
+	public Oml2PapyrusConverter(Ontology rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
-		this.catalog = catalog;
 		this.papyrusFolder = papyrusFolder;
 		this.papyrusResourceSet = papyrusResourceSet;
 		this.logger = logger;
@@ -53,14 +49,14 @@ public class Oml2PapyrusConverter {
 
 	public Resource convert() throws Exception {
 		// Create the UML resource set
-		ResourceSet umlResourceSet = new ResourceSetImpl();
-		ProfileUtils.initResourceSet(umlResourceSet);
+		ProfileUtils.initResourceSet(papyrusResourceSet);
 
 		// Create profile
-		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()
-				+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
-		Profile profile = ProfileUtils.createProfile(umlResourceSet, profileUri, rootOntology.getPrefix());
-
+		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
+		Profile profile = ProfileUtils.createProfile(papyrusResourceSet, profileUri, rootOntology.getPrefix(), rootOntology.getIri());
+		logger.info("Profile "+profile.getName()+" was created");
+		
+		// Create the stereotypes
 		Collection<StereoTypesInfo> entryPoints = getEntryPoints(rootOntology);
 		for (StereoTypesInfo entry : entryPoints) {
 			System.out.println(entry);
@@ -73,11 +69,12 @@ public class Oml2PapyrusConverter {
 			Vocabulary voc = entryPoint.vocabulary;
 			Package pkg = voc2Package.get(voc);
 			if (pkg == null) {
-				pkg = ProfileUtils.createPackage(profile, voc.getPrefix());
+				pkg = ProfileUtils.createPackage(profile, voc.getPrefix(), voc.getIri());
 				voc2Package.put(voc, pkg);
 			}
-			ProfileUtils.createStereotype(pkg, entryPoint.entity.getName(), entryPoint.entity instanceof Aspect,
+			Stereotype stereotype = ProfileUtils.createStereotype(pkg, entryPoint.entity.getName(), entryPoint.entity instanceof Aspect,
 					entryPoint.metaClasses);
+			logger.info("Stereotype "+stereotype.getName()+" was created");
 		}
 
 		/*
@@ -85,7 +82,7 @@ public class Oml2PapyrusConverter {
 		 * type instanceof Aspect); } // return the created Papyrus resources
 		 */
 
-		// define the profile after all elements have been created
+		// Define the profile after all elements have been created
 		profile.define();
 		
 		return profile.eResource();
