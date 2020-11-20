@@ -127,7 +127,7 @@ public class Papyrus2OmlApp {
 		final File inputModelFile = new File(inputModelPath);
 		
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputFolder, inputModelFile, catalog, writer, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputFolder, inputModelFile, omlResourceSet, catalog, writer, LOGGER);
 		omlResources.addAll(converter.convert());
 
 		// finish the Oml writer
