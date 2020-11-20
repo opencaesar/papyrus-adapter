@@ -46,10 +46,10 @@ public class ProfileUtils {
 			profile.setName(profileName);
 			resource.getContents().add(profile);
 			
-			PackageImport umlMetamodelImport = UMLFactory.eINSTANCE.createPackageImport();
-			umlMetamodelImport.setImportedPackage(getUMLMetamodel(resourceSet));
-			profile.getPackageImports().add(umlMetamodelImport);
+			// create a PackageImport for UML and treat it as a metamodel reference
+			profile.createMetamodelReference(getUMLMetamodel(resourceSet));
 			
+			// create a regular PackageImport for the PrimitiveTypes
 			PackageImport primitiveTypesLibraryImport = UMLFactory.eINSTANCE.createPackageImport();
 			primitiveTypesLibraryImport.setImportedPackage(getPrimitiveTypesLibrary(resourceSet));
 			profile.getPackageImports().add(primitiveTypesLibraryImport);
@@ -89,11 +89,7 @@ public class ProfileUtils {
 	}
 
 	private static org.eclipse.uml2.uml.Class referenceMetaclass(final Model umlMetamodel, final Profile profile, final String name) {
-		final org.eclipse.uml2.uml.Class metaclass = (org.eclipse.uml2.uml.Class) umlMetamodel.getOwnedType(name);
-		if (!profile.getReferencedMetaclasses().contains(metaclass)) {
-			profile.createMetaclassReference(metaclass);
-		}
-		return metaclass;
+		return (org.eclipse.uml2.uml.Class) umlMetamodel.getOwnedType(name);
 	}
 
 }
