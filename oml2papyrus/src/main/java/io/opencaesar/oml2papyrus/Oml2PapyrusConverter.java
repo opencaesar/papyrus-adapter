@@ -19,12 +19,12 @@ import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
-import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.QuotedLiteral;
+import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
@@ -39,6 +39,7 @@ public class Oml2PapyrusConverter {
 	private File papyrusFolder;
 	private ResourceSet papyrusResourceSet;
 	private Logger logger;
+	private Set<Entity> converted = new HashSet<>();
 
 	public Oml2PapyrusConverter(Ontology rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
@@ -67,41 +68,61 @@ public class Oml2PapyrusConverter {
 		for (StereoTypesInfo entryPoint : entryPoints) {
 			// create steroetype
 			Vocabulary voc = entryPoint.vocabulary;
+			Entity entity = entryPoint.entity;
 			Package pkg = voc2Package.get(voc);
 			if (pkg == null) {
 				pkg = ProfileUtils.createPackage(profile, voc.getPrefix(), voc.getIri());
 				voc2Package.put(voc, pkg);
 			}
-			Stereotype stereotype = ProfileUtils.createStereotype(pkg, entryPoint.entity.getName(), entryPoint.entity instanceof Aspect,
-					entryPoint.metaClasses);
-			logger.info("Stereotype "+stereotype.getName()+" was created");
+			Stereotype stereotype = ProfileUtils.createStereotype(pkg,
+																  entity.getName(),
+																  entity instanceof Aspect,
+																  entryPoint.metaClasses);
+			
+			converEntity(pkg,entity);
+			logger.debug("Stereotype "+stereotype.getName()+" was created");
 		}
-
-		/*
-		 * // create class class_ = ProfileUtils.createClass(package_, type.getName(),
-		 * type instanceof Aspect); } // return the created Papyrus resources
-		 */
-
 		// Define the profile after all elements have been created
 		profile.define();
-		
 		return profile.eResource();
+	}
+	
+	private void converEntity(Package pkg ,Entity entity) {
+		converEntity(pkg, entity,true);
+	}
+	
+	private void converEntity(Package pkg ,Entity entity, boolean handleSpecilizations) {
+		if (converted.contains(entity)) {
+			return;
+		}
+		converted.add(entity);
+		ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
+		if (handleSpecilizations) {
+			convertSpecializations(pkg, entity);
+		}
+	}
+	
+
+	private void convertSpecializations(Package pkg, Entity entity) {
+		List<SpecializableTerm> specTerms = OmlSearch.findSpecializedTerms(entity);
+		for (SpecializableTerm term : specTerms) {
+			if (term instanceof Entity) {
+				Entity superEntity = (Entity)term;
+				// super already in the list
+				converEntity(pkg, superEntity, false);
+				logger.debug(superEntity.getName());
+			}
+		}
 	}
 
 	private static class StereoTypesInfo {
 		public Vocabulary vocabulary;
 		public Entity entity;
-		public Annotation annotation;
 		public Set<String> metaClasses = new HashSet<>();
 
-		public StereoTypesInfo(Vocabulary voc, Entity entity, Annotation annot) {
+		public StereoTypesInfo(Vocabulary voc, Entity entity) {
 			this.vocabulary = voc;
 			this.entity = entity;
-			this.annotation = annot;
-		}
-
-		public boolean isSteroTypeOf() {
-			return metaClasses.size() > 0;
 		}
 
 		@Override
@@ -143,7 +164,7 @@ public class Oml2PapyrusConverter {
 				// find it is annotations
 				OmlSearch.findAnnotations(entity).forEach(annotation -> {
 					if (IS_STEREOTYPE.equals(OmlRead.getIri(annotation.getProperty()))) {
-						entityToInfo.put(entity, new StereoTypesInfo(voc, entity, annotation));
+						entityToInfo.put(entity, new StereoTypesInfo(voc, entity));
 					} else if (IS_STEREOTYPE_OF.equals(OmlRead.getIri(annotation.getProperty()))) {
 						Literal value = annotation.getValue();
 						if (value instanceof QuotedLiteral) {
@@ -151,7 +172,7 @@ public class Oml2PapyrusConverter {
 							String sValue = qLiteral.getValue();
 							StereoTypesInfo info = entityToInfo.get(entity);
 							if (info == null) {
-								info = new StereoTypesInfo(voc, entity, annotation);
+								info = new StereoTypesInfo(voc, entity);
 								entityToInfo.put(entity, info);
 							}
 							info.addMetaClass(sValue.substring(sValue.indexOf(':') + 1));
