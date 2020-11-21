@@ -104,7 +104,7 @@ public class Oml2PapyrusConverter {
 	
 
 	private void convertSpecializations(Package pkg, Entity entity) {
-		List<SpecializableTerm> specTerms = OmlSearch.findSpecializedTerms(entity);
+		List<SpecializableTerm> specTerms = OmlSearch.findAllSpecializedTerms(entity);
 		for (SpecializableTerm term : specTerms) {
 			if (term instanceof Entity) {
 				Entity superEntity = (Entity)term;
