@@ -14,18 +14,27 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.uml2.uml.Class;
+import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
+import org.eclipse.uml2.uml.PrimitiveType;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.Entity;
+import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.QuotedLiteral;
+import io.opencaesar.oml.Scalar;
+import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.SpecializableTerm;
+import io.opencaesar.oml.Structure;
+import io.opencaesar.oml.StructuredProperty;
 import io.opencaesar.oml.Vocabulary;
+import io.opencaesar.oml.util.OmlIndex;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
@@ -38,6 +47,7 @@ public class Oml2PapyrusConverter {
 	private Ontology rootOntology;
 	private File papyrusFolder;
 	private ResourceSet papyrusResourceSet;
+	private Model umlModel;
 	private Logger logger;
 	private Set<Entity> converted = new HashSet<>();
 
@@ -51,7 +61,7 @@ public class Oml2PapyrusConverter {
 	public Resource convert() throws Exception {
 		// Create the UML resource set
 		ProfileUtils.initResourceSet(papyrusResourceSet);
-
+		umlModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
 		// Create profile
 		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
 		Profile profile = ProfileUtils.createProfile(papyrusResourceSet, profileUri, rootOntology.getPrefix(), rootOntology.getIri());
@@ -96,12 +106,47 @@ public class Oml2PapyrusConverter {
 			return;
 		}
 		converted.add(entity);
-		ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
+		Class clazz = ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
+		mapProperties(pkg,clazz, entity);
 		if (handleSpecilizations) {
 			convertSpecializations(pkg, entity);
 		}
 	}
 	
+
+	private void mapProperties(Package pkg, Class clazz, Entity entity) {
+		 List<FeatureProperty> props = OmlIndex.findFeaturePropertiesWithDomain(entity);
+		 for (FeatureProperty prop : props) {
+			 if (prop instanceof ScalarProperty) {
+				 ScalarProperty sProp = (ScalarProperty)prop;
+				 Scalar range = sProp.getRange();
+				 PrimitiveType rangeClass = getTypeForRange(pkg,range);
+				 clazz.createOwnedAttribute(prop.getName(),rangeClass);
+				 System.out.println("Range : " + range.getName());
+			 }else if (prop instanceof StructuredProperty) {
+				 StructuredProperty stProp = (StructuredProperty)prop;
+				 Structure range = stProp.getRange();
+				 System.out.println("Range : " + range.getName());
+				 
+			 }
+			 //clazz.createOwnedAttribute(prop.getName(),clazz);
+			 
+			 System.out.println(prop.getName());
+		 }
+		
+	}
+
+	private PrimitiveType getTypeForRange(Package pkg, Scalar range) {
+		switch (range.getName()) {
+		case "string":
+			return (PrimitiveType)umlModel.getMember("String");
+		case "integer":
+			return (PrimitiveType)umlModel.getMember("Integer");
+		case "boolean":
+			return (PrimitiveType)umlModel.getMember("Boolean");
+		}
+		return null;
+	}
 
 	private void convertSpecializations(Package pkg, Entity entity) {
 		List<SpecializableTerm> specTerms = OmlSearch.findAllSpecializedTerms(entity);
