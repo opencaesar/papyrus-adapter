@@ -25,9 +25,12 @@ import org.eclipse.uml2.uml.resource.UMLResource;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.FeatureProperty;
+import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.QuotedLiteral;
+import io.opencaesar.oml.Relation;
+import io.opencaesar.oml.ReverseRelation;
 import io.opencaesar.oml.Scalar;
 import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.SpecializableTerm;
@@ -49,7 +52,7 @@ public class Oml2PapyrusConverter {
 	private ResourceSet papyrusResourceSet;
 	private Model umlModel;
 	private Logger logger;
-	private Set<Entity> converted = new HashSet<>();
+	private Map<Entity, Class> converted = new HashMap<>();
 	private Map<Vocabulary,Package> voc2Package = new HashMap<>();
 
 	public Oml2PapyrusConverter(Ontology rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
@@ -108,17 +111,35 @@ public class Oml2PapyrusConverter {
 	}
 	
 	private void converEntity(Package pkg ,Entity entity, boolean handleSpecilizations) {
-		if (converted.contains(entity)) {
+		if (converted.containsKey(entity)) {
 			return;
 		}
-		converted.add(entity);
 		Class clazz = ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
+		converted.put(entity,clazz);
 		mapProperties(pkg,clazz, entity);
+		mapRelationShips(pkg,clazz,entity);
 		if (handleSpecilizations) {
 			convertSpecializations(pkg, entity);
 		}
 	}
 	
+
+	private void mapRelationShips(Package pkg, Class clazz, Entity entity) {
+		List<Relation> relations = OmlSearch.findRelationsWithSource(entity);
+		for (Relation relation : relations) {
+			Entity range = relation.getRange();
+			Package containerPackage = getPackageForVoc(entity.getOwningVocabulary(),(Package) pkg.getOwner());
+			converEntity(containerPackage, range);
+			if (relation instanceof ForwardRelation) {
+				ForwardRelation fRel = (ForwardRelation)relation;
+				System.out.println(fRel);
+			}else if (relation instanceof ReverseRelation) {
+				ReverseRelation revRelation = (ReverseRelation)relation;
+				System.out.println(revRelation);
+			}
+		}
+		
+	}
 
 	private void mapProperties(Package pkg, Class clazz, Entity entity) {
 		 List<FeatureProperty> props = OmlIndex.findFeaturePropertiesWithDomain(entity);
