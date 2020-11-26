@@ -60,7 +60,7 @@ public class ProfileUtils {
 		return null;
 	}
 
-	public static Package createPackage(Profile profile, String packageName, String packageURI) {
+	public static Package createPackage(Package profile, String packageName, String packageURI) {
 		Package package_ = UMLFactory.eINSTANCE.createPackage();
 		package_.setName(packageName);
 		package_.setURI(packageURI);

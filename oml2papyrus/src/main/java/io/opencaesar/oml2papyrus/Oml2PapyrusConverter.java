@@ -50,6 +50,7 @@ public class Oml2PapyrusConverter {
 	private Model umlModel;
 	private Logger logger;
 	private Set<Entity> converted = new HashSet<>();
+	private Map<Vocabulary,Package> voc2Package = new HashMap<>();
 
 	public Oml2PapyrusConverter(Ontology rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
@@ -73,17 +74,11 @@ public class Oml2PapyrusConverter {
 			System.out.println(entry);
 		}
 
-		Map<Vocabulary, Package> voc2Package = new HashMap<>();
-
 		for (StereoTypesInfo entryPoint : entryPoints) {
 			// create steroetype
 			Vocabulary voc = entryPoint.vocabulary;
 			Entity entity = entryPoint.entity;
-			Package pkg = voc2Package.get(voc);
-			if (pkg == null) {
-				pkg = ProfileUtils.createPackage(profile, voc.getPrefix(), voc.getIri());
-				voc2Package.put(voc, pkg);
-			}
+			Package pkg = getPackageForVoc(voc, profile);
 			Stereotype stereotype = ProfileUtils.createStereotype(pkg,
 																  entity.getName(),
 																  entity instanceof Aspect,
@@ -94,7 +89,18 @@ public class Oml2PapyrusConverter {
 		}
 		// Define the profile after all elements have been created
 		profile.define();
+		converted.clear();
+		voc2Package.clear();
 		return profile.eResource();
+	}
+	
+	private Package getPackageForVoc(Vocabulary voc, Package parent) {
+		Package pkg = voc2Package.get(voc);
+		if (pkg == null) {
+			pkg = ProfileUtils.createPackage(parent, voc.getPrefix(), voc.getIri());
+			voc2Package.put(voc, pkg);
+		}
+		return pkg;
 	}
 	
 	private void converEntity(Package pkg ,Entity entity) {
@@ -153,8 +159,9 @@ public class Oml2PapyrusConverter {
 		for (SpecializableTerm term : specTerms) {
 			if (term instanceof Entity) {
 				Entity superEntity = (Entity)term;
-				// super already in the list
-				converEntity(pkg, superEntity, false);
+				// get the super entity package
+				Package superPackage = getPackageForVoc(superEntity.getOwningVocabulary(), (Package) pkg.getOwner());
+				converEntity(superPackage, superEntity, false);
 				logger.debug(superEntity.getName());
 			}
 		}
