@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.uml2.uml.AggregationKind;
 import org.eclipse.uml2.uml.Class;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
@@ -23,6 +24,7 @@ import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
 import io.opencaesar.oml.Aspect;
+import io.opencaesar.oml.CardinalityRestrictionKind;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.ForwardRelation;
@@ -30,6 +32,8 @@ import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.QuotedLiteral;
 import io.opencaesar.oml.Relation;
+import io.opencaesar.oml.RelationCardinalityRestrictionAxiom;
+import io.opencaesar.oml.RelationEntity;
 import io.opencaesar.oml.ReverseRelation;
 import io.opencaesar.oml.Scalar;
 import io.opencaesar.oml.ScalarProperty;
@@ -90,6 +94,7 @@ public class Oml2PapyrusConverter {
 			converEntity(pkg,entity);
 			logger.debug("Stereotype "+stereotype.getName()+" was created");
 		}
+		
 		// Define the profile after all elements have been created
 		profile.define();
 		converted.clear();
@@ -106,13 +111,13 @@ public class Oml2PapyrusConverter {
 		return pkg;
 	}
 	
-	private void converEntity(Package pkg ,Entity entity) {
-		converEntity(pkg, entity,true);
+	private Class converEntity(Package pkg ,Entity entity) {
+		return converEntity(pkg, entity,true);
 	}
 	
-	private void converEntity(Package pkg ,Entity entity, boolean handleSpecilizations) {
+	private Class converEntity(Package pkg ,Entity entity, boolean handleSpecilizations) {
 		if (converted.containsKey(entity)) {
-			return;
+			return converted.get(entity);
 		}
 		Class clazz = ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
 		converted.put(entity,clazz);
@@ -121,6 +126,7 @@ public class Oml2PapyrusConverter {
 		if (handleSpecilizations) {
 			convertSpecializations(pkg, entity);
 		}
+		return clazz;
 	}
 	
 
@@ -129,13 +135,48 @@ public class Oml2PapyrusConverter {
 		for (Relation relation : relations) {
 			Entity range = relation.getRange();
 			Package containerPackage = getPackageForVoc(entity.getOwningVocabulary(),(Package) pkg.getOwner());
-			converEntity(containerPackage, range);
+			Class clazz1 = converEntity(containerPackage, range);
+			RelationEntity relEntity = null; 
 			if (relation instanceof ForwardRelation) {
 				ForwardRelation fRel = (ForwardRelation)relation;
+				relEntity = fRel.getRelationEntity();
 				System.out.println(fRel);
 			}else if (relation instanceof ReverseRelation) {
 				ReverseRelation revRelation = (ReverseRelation)relation;
-				System.out.println(revRelation);
+				relEntity = revRelation.getRelationEntity();
+			}
+			
+			if (relEntity!=null) {
+				ForwardRelation fwdRel = relEntity.getForwardRelation();
+				ReverseRelation revRel = relEntity.getReverseRelation();
+				boolean isFunctional = relEntity.isFunctional();
+				String end1Name = fwdRel.getName();
+				boolean end1Navigable = true;
+				String end2Name = null;
+				boolean end2Navigable = false;
+				if (revRel!=null) {
+					end2Name = revRel.getName();
+					end2Navigable = true;
+				}
+				int end1Lower = 0 ;
+				int end1Upper = -1;
+				if (isFunctional) {
+					end1Upper = 1;
+				}
+				
+				List<RelationCardinalityRestrictionAxiom> card = OmlSearch.findRelationCardinalityRestrictionAxiomsWithRange(relEntity);
+				for(RelationCardinalityRestrictionAxiom axiom : card) {
+					if(axiom.getKind()==CardinalityRestrictionKind.MIN) {
+						end1Lower = (int)axiom.getCardinality();
+					}else if (axiom.getKind()==CardinalityRestrictionKind.MAX) {
+						end1Upper = (int)axiom.getCardinality();
+					}
+				}
+
+				int end2Lower = 0 ;
+				int end2Upper = 1;
+				clazz.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper, clazz1,
+										end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);	
 			}
 		}
 		
@@ -155,9 +196,7 @@ public class Oml2PapyrusConverter {
 				 Structure range = stProp.getRange();
 				 System.out.println("Range : " + range.getName());
 				 
-			 }
-			 //clazz.createOwnedAttribute(prop.getName(),clazz);
-			 
+			 } 
 			 System.out.println(prop.getName());
 		 }
 		
