@@ -77,11 +77,18 @@ public class ProfileUtils {
 		if (metaClassNames != null && metaClassNames.size() > 0) {
 			Model umlMetamodel = getUMLMetamodel(package_.eResource().getResourceSet());
 			for (String metaClassName : metaClassNames) {
-				extendMetaclass(umlMetamodel, (Profile) package_.getOwner(), metaClassName, createdST);
+				extendMetaclass(umlMetamodel, getProfile(package_), metaClassName, createdST);
 			}
 		}
 		return createdST;
 
+	}
+	
+	private static Profile getProfile(Package pkg) {
+		if (pkg == null || pkg instanceof Profile) {
+			return (Profile)pkg;
+		}
+		return getProfile(pkg.getNestingPackage());
 	}
 
 	private static void extendMetaclass(final Model umlMetamodel, final Profile profile, final String name, final Stereotype stereotype) {

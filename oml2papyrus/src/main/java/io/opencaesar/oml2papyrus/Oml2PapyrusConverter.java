@@ -18,9 +18,11 @@ import org.eclipse.uml2.uml.AggregationKind;
 import org.eclipse.uml2.uml.Class;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
+import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.uml2.uml.PrimitiveType;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
+import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
 import io.opencaesar.oml.Aspect;
@@ -90,11 +92,14 @@ public class Oml2PapyrusConverter {
 																  entity.getName(),
 																  entity instanceof Aspect,
 																  entryPoint.metaClasses);
-			
-			converEntity(pkg,entity);
 			logger.debug("Stereotype "+stereotype.getName()+" was created");
 		}
 		
+		for (StereoTypesInfo entryPoint : entryPoints) {
+			Entity entity = entryPoint.entity;
+			converEntity(profile, entity);
+		}
+
 		// Define the profile after all elements have been created
 		profile.define();
 		converted.clear();
@@ -102,40 +107,59 @@ public class Oml2PapyrusConverter {
 		return profile.eResource();
 	}
 	
-	private Package getPackageForVoc(Vocabulary voc, Package parent) {
+	private Package getPackageForVoc(Vocabulary voc, Profile profile) {
 		Package pkg = voc2Package.get(voc);
 		if (pkg == null) {
-			pkg = ProfileUtils.createPackage(parent, voc.getPrefix(), voc.getIri());
+			pkg = getPackage(voc.getIri(), profile);
 			voc2Package.put(voc, pkg);
 		}
 		return pkg;
 	}
 	
-	private Class converEntity(Package pkg ,Entity entity) {
-		return converEntity(pkg, entity,true);
+	private Package getPackage(String iri, Package pkg) {
+		int i = iri.lastIndexOf("/");
+		if (iri.length() == i+1) {
+			return pkg;
+		}
+		if (i > 0) {
+			pkg = getPackage(iri.substring(0, i), pkg);
+		}
+		String name = iri.substring(i+1);
+		Package newPkg = (Package) pkg.getPackagedElement(name, false, UMLPackage.Literals.PACKAGE, false);
+		if (newPkg == null) {
+			newPkg = ProfileUtils.createPackage(pkg, name, iri);
+		}
+		return newPkg;
 	}
 	
-	private Class converEntity(Package pkg ,Entity entity, boolean handleSpecilizations) {
+	private Class converEntity(Profile profile, Entity entity) {
+		return converEntity(profile, entity, true);
+	}
+	
+	private Class converEntity(Profile profile, Entity entity, boolean handleSpecilizations) {
 		if (converted.containsKey(entity)) {
 			return converted.get(entity);
 		}
-		Class clazz = ProfileUtils.createClass(pkg, entity.getName(), entity instanceof Aspect);
+		Package containerPackage = getPackageForVoc(entity.getOwningVocabulary(), profile);
+		Class clazz = (Class) containerPackage.getPackagedElement(entity.getName());
+		if (clazz == null) {
+			clazz = ProfileUtils.createClass(containerPackage, entity.getName(), entity instanceof Aspect);
+		}
 		converted.put(entity,clazz);
-		mapProperties(pkg,clazz, entity);
-		mapRelationShips(pkg,clazz,entity);
+		mapProperties(profile, clazz, entity);
+		mapRelationShips(profile, clazz,entity);
 		if (handleSpecilizations) {
-			convertSpecializations(pkg, entity);
+			convertSpecializations(profile, entity);
 		}
 		return clazz;
 	}
 	
 
-	private void mapRelationShips(Package pkg, Class clazz, Entity entity) {
+	private void mapRelationShips(Profile profile, Class clazz, Entity entity) {
 		List<Relation> relations = OmlSearch.findRelationsWithSource(entity);
 		for (Relation relation : relations) {
 			Entity range = relation.getRange();
-			Package containerPackage = getPackageForVoc(entity.getOwningVocabulary(),(Package) pkg.getOwner());
-			Class clazz1 = converEntity(containerPackage, range);
+			Class clazz1 = converEntity(profile, range);
 			RelationEntity relEntity = null; 
 			if (relation instanceof ForwardRelation) {
 				ForwardRelation fRel = (ForwardRelation)relation;
@@ -214,14 +238,13 @@ public class Oml2PapyrusConverter {
 		return null;
 	}
 
-	private void convertSpecializations(Package pkg, Entity entity) {
+	private void convertSpecializations(Profile profile, Entity entity) {
 		List<SpecializableTerm> specTerms = OmlSearch.findAllSpecializedTerms(entity);
 		for (SpecializableTerm term : specTerms) {
 			if (term instanceof Entity) {
 				Entity superEntity = (Entity)term;
 				// get the super entity package
-				Package superPackage = getPackageForVoc(superEntity.getOwningVocabulary(), (Package) pkg.getOwner());
-				converEntity(superPackage, superEntity, false);
+				converEntity(profile, superEntity, false);
 				logger.debug(superEntity.getName());
 			}
 		}
