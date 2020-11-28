@@ -78,10 +78,7 @@ public class Oml2PapyrusConverter {
 		
 		// Create the stereotypes
 		Collection<StereoTypesInfo> entryPoints = getEntryPoints(rootOntology);
-		for (StereoTypesInfo entry : entryPoints) {
-			System.out.println(entry);
-		}
-
+		
 		for (StereoTypesInfo entryPoint : entryPoints) {
 			// create steroetype
 			Vocabulary voc = entryPoint.vocabulary;
@@ -98,12 +95,32 @@ public class Oml2PapyrusConverter {
 			Entity entity = entryPoint.entity;
 			converEntity(profile, entity);
 		}
+		
+		// update teh generalizations
+		updateAllGeneralizations();
 
 		// Define the profile after all elements have been created
 		profile.define();
 		converted.clear();
 		voc2Package.clear();
 		return profile.eResource();
+	}
+	
+	private void updateAllGeneralizations() {
+		Set<Entity> keys = converted.keySet();
+		for (Entity entity : keys) {
+			Class clazz = converted.get(entity);
+			List<SpecializableTerm> specTerms = OmlSearch.findSpecializedTerms(entity);
+			for (SpecializableTerm term : specTerms) {
+				if (term instanceof Entity) {
+					Entity superEntity = (Entity)term;
+					Class superClazz = converted.get(superEntity);
+					clazz.createGeneralization(superClazz);
+				}
+			}
+			
+		}
+		
 	}
 	
 	private Package getPackageForVoc(Vocabulary voc, Profile profile) {
