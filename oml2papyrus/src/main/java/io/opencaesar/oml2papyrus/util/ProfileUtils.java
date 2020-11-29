@@ -15,14 +15,9 @@ import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
-import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 
 public class ProfileUtils {
 
-	public static void initResourceSet(ResourceSet resourceSet) {
-		UMLResourcesUtil.init(resourceSet);
-	}
-	
 	public static Model getUMLMetamodel(ResourceSet resourceSet) {
 		Resource resource = resourceSet.getResource(URI.createURI(UMLResource.UML_METAMODEL_URI), true);
 		if (resource != null) {

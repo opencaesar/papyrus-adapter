@@ -74,9 +74,6 @@ public class VocabularyBundleToProfile {
 		converted.clear();
 		voc2Package.clear();
 
-		// Initialize the UML resource set
-		ProfileUtils.initResourceSet(papyrusResourceSet);
-		
 		// Get the UML metamodel
 		umlMetaModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
 		
