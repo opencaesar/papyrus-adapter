@@ -42,25 +42,27 @@ import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.Structure;
 import io.opencaesar.oml.StructuredProperty;
 import io.opencaesar.oml.Vocabulary;
+import io.opencaesar.oml.VocabularyBundle;
 import io.opencaesar.oml.util.OmlIndex;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
 
-public class Oml2PapyrusConverter {
+public class VocabularyBundleToProfile {
 
 	private static final String IS_STEREOTYPE = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotype";
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
-	private Ontology rootOntology;
+	private VocabularyBundle rootOntology;
 	private File papyrusFolder;
 	private ResourceSet papyrusResourceSet;
-	private Model umlModel;
 	private Logger logger;
+
+	private Model umlMetaModel;
 	private Map<Entity, Class> converted = new HashMap<>();
 	private Map<Vocabulary,Package> voc2Package = new HashMap<>();
 
-	public Oml2PapyrusConverter(Ontology rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
+	public VocabularyBundleToProfile(VocabularyBundle rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
 		this.papyrusFolder = papyrusFolder;
 		this.papyrusResourceSet = papyrusResourceSet;
@@ -70,7 +72,7 @@ public class Oml2PapyrusConverter {
 	public Resource convert() throws Exception {
 		// Create the UML resource set
 		ProfileUtils.initResourceSet(papyrusResourceSet);
-		umlModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
+		umlMetaModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
 		// Create profile
 		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
 		Profile profile = ProfileUtils.createProfile(papyrusResourceSet, profileUri, rootOntology.getPrefix(), rootOntology.getIri());
@@ -245,11 +247,11 @@ public class Oml2PapyrusConverter {
 	private PrimitiveType getTypeForRange(Package pkg, Scalar range) {
 		switch (range.getName()) {
 		case "string":
-			return (PrimitiveType)umlModel.getMember("String");
+			return (PrimitiveType)umlMetaModel.getMember("String");
 		case "integer":
-			return (PrimitiveType)umlModel.getMember("Integer");
+			return (PrimitiveType)umlMetaModel.getMember("Integer");
 		case "boolean":
-			return (PrimitiveType)umlModel.getMember("Boolean");
+			return (PrimitiveType)umlMetaModel.getMember("Boolean");
 		}
 		return null;
 	}

@@ -25,7 +25,9 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.io.CharStreams;
 
+import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Ontology;
+import io.opencaesar.oml.VocabularyBundle;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
@@ -120,9 +122,6 @@ public class Oml2PapyrusApp {
 		OmlStandaloneSetup.doSetup();
 		OmlXMIResourceFactory.register();
 		
-		// create the Oml resource set
-		final XtextResourceSet omlResourceSet = new XtextResourceSet();
-
 		// load the Oml catalog (to load ontologies by IRI)
 		final URL catalogURL = new File(inputCatalogPath).toURI().toURL();
 		final OmlCatalog catalog = OmlCatalog.create(catalogURL);
@@ -138,24 +137,33 @@ public class Oml2PapyrusApp {
 			throw new RuntimeException("Ontology with iri '"+"' cannot be found in the catalog");
 		}
 		
+		// create the Oml resource set
+		final XtextResourceSet omlResourceSet = new XtextResourceSet();
+
 		// load the root ontology
 		final Resource ontologyResource = omlResourceSet.getResource(ontologyUri, true); 
 		final Ontology rootOntology = OmlRead.getOntology(ontologyResource);
 
 		// Create the papyrus resource set
-		ResourceSet papyrusResourceSet = new ResourceSetImpl();
+		final ResourceSet papyrusResourceSet = new ResourceSetImpl();
+		Resource papyrusResource = null;
 		
 		// Papyrus folder
 		File papyrusFolder = new File(outputFolderPath);
 
 		// Convert the input ontology to Papyrus resource
-		Oml2PapyrusConverter converter = new Oml2PapyrusConverter(rootOntology, papyrusFolder, papyrusResourceSet, LOGGER);
-		Resource resource = converter.convert();
+		if (rootOntology instanceof VocabularyBundle) {
+			papyrusResource = new VocabularyBundleToProfile((VocabularyBundle)rootOntology, papyrusFolder, papyrusResourceSet, LOGGER).convert();
+		} else if (rootOntology instanceof DescriptionBundle) {
+			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, papyrusFolder, papyrusResourceSet, LOGGER).convert();
+		}
 				
-		// save the Papyrus resource
-		LOGGER.info("Saving: "+resource.getURI());
-		resource.save(Collections.EMPTY_MAP);
-
+		// save the Papyrus resources
+		if (papyrusResource != null) {
+			LOGGER.info("Saving: "+papyrusResource.getURI());
+			papyrusResource.save(Collections.EMPTY_MAP);
+		}
+		
 		LOGGER.info("=================================================================");
 		LOGGER.info("                          E N D");
 		LOGGER.info("=================================================================");
