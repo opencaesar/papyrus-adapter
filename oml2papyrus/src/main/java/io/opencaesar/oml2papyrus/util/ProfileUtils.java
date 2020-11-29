@@ -34,25 +34,25 @@ public class ProfileUtils {
 		return null;
 	}
 
-	public static Profile createProfile(ResourceSet resourceSet, URI profileUri, String profileName, String profileURI) {
-		Resource resource = resourceSet.createResource(profileUri);
-		if (resource != null) {
-			Profile profile = UMLFactory.eINSTANCE.createProfile();
-			profile.setName(profileName);
-			profile.setURI(profileURI);
-			resource.getContents().add(profile);
-			
-			// create a PackageImport for UML and treat it as a metamodel reference
-			profile.createMetamodelReference(getUMLMetamodel(resourceSet));
-			
-			// create a regular PackageImport for the PrimitiveTypes
-			PackageImport primitiveTypesLibraryImport = UMLFactory.eINSTANCE.createPackageImport();
-			primitiveTypesLibraryImport.setImportedPackage(getPrimitiveTypesLibrary(resourceSet));
-			profile.getPackageImports().add(primitiveTypesLibraryImport);
-			
-			return profile;
-		}
-		return null;
+	public static Profile createProfile(ResourceSet resourceSet, URI resourceUri, String profileName, String profileURI) {
+		Resource resource = resourceSet.createResource(resourceUri);
+		if (resource == null)
+			return null;
+		
+		Profile profile = UMLFactory.eINSTANCE.createProfile();
+		profile.setName(profileName);
+		profile.setURI(profileURI);
+		resource.getContents().add(profile);
+		
+		// create a PackageImport for UML and treat it as a metamodel reference
+		profile.createMetamodelReference(getUMLMetamodel(resourceSet));
+		
+		// create a regular PackageImport for the PrimitiveTypes
+		PackageImport primitiveTypesLibraryImport = UMLFactory.eINSTANCE.createPackageImport();
+		primitiveTypesLibraryImport.setImportedPackage(getPrimitiveTypesLibrary(resourceSet));
+		profile.getPackageImports().add(primitiveTypesLibraryImport);
+		
+		return profile;
 	}
 
 	public static Package createPackage(Package profile, String packageName, String packageURI) {
