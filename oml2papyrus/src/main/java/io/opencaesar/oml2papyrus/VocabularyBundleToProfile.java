@@ -70,19 +70,35 @@ public class VocabularyBundleToProfile {
 	}
 
 	public Resource convert() throws Exception {
-		// Create the UML resource set
+		// Clear all caches
+		converted.clear();
+		voc2Package.clear();
+
+		// Initialize the UML resource set
 		ProfileUtils.initResourceSet(papyrusResourceSet);
+		
+		// Get the UML metamodel
 		umlMetaModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
-		// Create profile
+		
+		// Create the profile
 		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
 		Profile profile = ProfileUtils.createProfile(papyrusResourceSet, profileUri, rootOntology.getPrefix(), rootOntology.getIri());
 		logger.info("Profile "+profile.getName()+" was created");
 		
+		// Populate the profile
+		populateProfile(profile);
+
+		// Define the profile after all elements have been created
+		profile.define();
+		
+		return profile.eResource();
+	}
+	
+	private void populateProfile(Profile profile) {
 		// Create the stereotypes
 		Collection<StereoTypesInfo> entryPoints = getEntryPoints(rootOntology);
 		
 		for (StereoTypesInfo entryPoint : entryPoints) {
-			// create steroetype
 			Vocabulary voc = entryPoint.vocabulary;
 			Entity entity = entryPoint.entity;
 			Package pkg = getPackageForVoc(voc, profile);
@@ -98,14 +114,8 @@ public class VocabularyBundleToProfile {
 			converEntity(profile, entity);
 		}
 		
-		// update teh generalizations
+		// update the generalizations
 		updateAllGeneralizations();
-
-		// Define the profile after all elements have been created
-		profile.define();
-		converted.clear();
-		voc2Package.clear();
-		return profile.eResource();
 	}
 	
 	private void updateAllGeneralizations() {
