@@ -19,7 +19,6 @@ import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PrimitiveType;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
-import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
 import io.opencaesar.oml.Annotation;
@@ -45,6 +44,7 @@ import io.opencaesar.oml.util.OmlIndex;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
+import io.opencaesar.oml2papyrus.util.UmlUtils;
 
 public class VocabularyBundleToProfile {
 
@@ -52,8 +52,8 @@ public class VocabularyBundleToProfile {
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
 	private VocabularyBundle rootOntology;
-	private File papyrusFolder;
-	private ResourceSet papyrusResourceSet;
+	private File outputFolder;
+	private ResourceSet outputResourceSet;
 	private Logger logger;
 
 	private Model umlMetaModel;
@@ -67,11 +67,11 @@ public class VocabularyBundleToProfile {
 		vocsToSkip.add("http://www.eclipse.org/uml2/5.0.0/UML-Annotations");
 	}
 
-	public VocabularyBundleToProfile(VocabularyBundle rootOntology, File papyrusFolder, ResourceSet papyrusResourceSet,
+	public VocabularyBundleToProfile(VocabularyBundle rootOntology, File outputFolder, ResourceSet outputResourceSet,
 			Logger logger) {
 		this.rootOntology = rootOntology;
-		this.papyrusFolder = papyrusFolder;
-		this.papyrusResourceSet = papyrusResourceSet;
+		this.outputFolder = outputFolder;
+		this.outputResourceSet = outputResourceSet;
 		this.logger = logger;
 	}
 
@@ -81,14 +81,26 @@ public class VocabularyBundleToProfile {
 		voc2Package.clear();
 
 		// Get the UML metamodel
-		umlMetaModel = ProfileUtils.getUMLMetamodel(papyrusResourceSet);
+		umlMetaModel = ProfileUtils.getUMLMetamodel(outputResourceSet);
+
+		// Create parent folder
+		URI iri = URI.createURI(rootOntology.getIri());
+		String authority = iri.authority();
+		List<String> segments = iri.segmentsList();
+		File parentFolder = new File(outputFolder.getPath()+File.separator+authority+File.separator+String.join(File.separator, segments.subList(0,  segments.size()-1)));
+		parentFolder.mkdirs();
+
+		// Create resource
+		URI outputResourceUri = URI.createFileURI(parentFolder.getAbsolutePath()+File.separator+iri.lastSegment()+'.'+UMLResource.PROFILE_FILE_EXTENSION);
+		Resource outputResource = outputResourceSet.createResource(outputResourceUri);
+		if (outputResource != null) {
+			logger.info(outputResourceUri+" was created");
+		} else {
+			return null;
+		}
 
 		// Create the profile
-		URI profileUri = URI.createFileURI(papyrusFolder.getAbsolutePath() + File.separator + rootOntology.getPrefix()
-				+ '.' + UMLResource.PROFILE_FILE_EXTENSION);
-		Profile profile = ProfileUtils.createProfile(papyrusResourceSet, profileUri, rootOntology.getPrefix(),
-				rootOntology.getIri());
-		logger.info("Profile " + profile.getName() + " was created");
+		Profile profile = ProfileUtils.createProfile(outputResourceSet, outputResourceUri, rootOntology.getPrefix(), rootOntology.getIri());
 
 		// Populate the profile
 		populateProfile(profile);
@@ -247,26 +259,10 @@ public class VocabularyBundleToProfile {
 	private Package getPackageForVoc(Vocabulary voc, Profile profile) {
 		Package pkg = voc2Package.get(voc);
 		if (pkg == null) {
-			pkg = getPackage(voc.getIri(), profile);
+			pkg = UmlUtils.getPackage(voc.getIri(), profile);
 			voc2Package.put(voc, pkg);
 		}
 		return pkg;
-	}
-
-	private Package getPackage(String iri, Package pkg) {
-		int i = iri.lastIndexOf("/");
-		if (iri.length() == i + 1) {
-			return pkg;
-		}
-		if (i > 0) {
-			pkg = getPackage(iri.substring(0, i), pkg);
-		}
-		String name = iri.substring(i + 1);
-		Package newPkg = (Package) pkg.getPackagedElement(name, false, UMLPackage.Literals.PACKAGE, false);
-		if (newPkg == null) {
-			newPkg = ProfileUtils.createPackage(pkg, name, iri);
-		}
-		return newPkg;
 	}
 
 	private Class converEntity(Profile profile, Entity entity) {
