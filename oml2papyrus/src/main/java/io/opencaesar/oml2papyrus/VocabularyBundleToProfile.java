@@ -1,6 +1,7 @@
 package io.opencaesar.oml2papyrus;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -26,6 +27,7 @@ import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.CardinalityRestrictionKind;
 import io.opencaesar.oml.Entity;
+import io.opencaesar.oml.EnumeratedScalar;
 import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Literal;
@@ -113,11 +115,19 @@ public class VocabularyBundleToProfile {
 				continue;
 			}
 			Package pkg = null;
+			final Set<java.lang.Class> classes = new HashSet();
 			// get all voc entities
 			List<Entity> entities = voc.getOwnedStatements().stream().filter(statement -> {
+				if (statement instanceof EnumeratedScalar) {
+					System.out.println(statement.getClass());
+				}
+				classes.add(statement.getClass());
 				return statement instanceof Entity;
 			}).map(statement -> (Entity) statement).collect(Collectors.toList());
 			// go over all entities
+			for (java.lang.Class clazz: classes) {
+				System.out.println(clazz.getName());
+			}
 			if (!entities.isEmpty()) {
 				pkg = getPackageForVoc(voc, profile);
 			}
