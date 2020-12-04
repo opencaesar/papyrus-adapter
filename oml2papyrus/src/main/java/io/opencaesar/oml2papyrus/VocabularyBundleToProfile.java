@@ -38,7 +38,6 @@ import io.opencaesar.oml.ReverseRelation;
 import io.opencaesar.oml.Scalar;
 import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.SpecializableTerm;
-import io.opencaesar.oml.Structure;
 import io.opencaesar.oml.StructuredProperty;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.VocabularyBundle;
@@ -127,33 +126,16 @@ public class VocabularyBundleToProfile {
 				continue;
 			}
 			Package pkg = null;
-			final Set<java.lang.Class> classes = new HashSet();
+			
+			List<Entity> entities = new ArrayList<>();
+			List<EnumeratedScalar> enums = new ArrayList<>();
+			
 			// get all voc entities
-			List<Entity> entities = voc.getOwnedStatements().stream().filter(statement -> {
-				if (statement instanceof EnumeratedScalar) {
-					System.out.println(statement.getClass());
-				}
-				classes.add(statement.getClass());
-				return statement instanceof Entity;
-			}).map(statement -> (Entity) statement).collect(Collectors.toList());
-			// go over all entities
-			for (java.lang.Class clazz: classes) {
-				System.out.println(clazz.getName());
-			}
-			if (!entities.isEmpty()) {
+			extractEntitiesAndEnums(voc, entities, enums);
+			if (!entities.isEmpty() || !enums.isEmpty()) {
 				pkg = getPackageForVoc(voc, profile);
 			}
-			for (Entity entity : entities) {
-				logger.debug("Converting : " + entity.getName());
-				StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
-				if (infoHolder != null) {
-					// SteroType
-					Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(),
-							entity instanceof Aspect, infoHolder.metaClasses);
-					logger.debug("Stereotype " + stereotype.getName() + " was created");
-				}
-				converEntity(profile, entity);
-			}
+			convertEntities(profile, voc, pkg, entities);
 			logger.debug("================================================");
 		}
 
@@ -162,6 +144,30 @@ public class VocabularyBundleToProfile {
 
 		// update the generalizations
 		updateAllGeneralizations();
+	}
+
+	private void convertEntities(Profile profile, Vocabulary voc, Package pkg, List<Entity> entities) {
+		for (Entity entity : entities) {
+			logger.debug("Converting : " + entity.getName());
+			StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
+			if (infoHolder != null) {
+				// SteroType
+				Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(),
+						entity instanceof Aspect, infoHolder.metaClasses);
+				logger.debug("Stereotype " + stereotype.getName() + " was created");
+			}
+			converEntity(profile, entity);
+		}
+	}
+
+	private void extractEntitiesAndEnums(Vocabulary voc, List<Entity> entities, List<EnumeratedScalar> enums) {
+		voc.getOwnedStatements().forEach(statement -> {
+			if (statement instanceof Entity) {
+				entities.add((Entity)statement);
+			}else if (statement instanceof EnumeratedScalar) {
+				enums.add((EnumeratedScalar)statement);
+			}
+		});
 	}
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
@@ -177,8 +183,8 @@ public class VocabularyBundleToProfile {
 				return statement instanceof RelationEntity;
 			}).map(statement -> (RelationEntity) statement).collect(Collectors.toList());
 			for (RelationEntity entity : entities) {
-				logger.info("Converting Relation: " + entity.getName());
-				logger.info(entity);
+				logger.debug("Converting Relation: " + entity.getName());
+				logger.debug(entity);
 				ForwardRelation srcRel = entity.getForwardRelation();
 				ReverseRelation trgRel = entity.getReverseRelation();
 				Entity src = srcRel.getDomain();
@@ -299,7 +305,7 @@ public class VocabularyBundleToProfile {
 				clazz.createOwnedAttribute(prop.getName(), rangeClass);
 			} else if (prop instanceof StructuredProperty) {
 				StructuredProperty stProp = (StructuredProperty) prop;
-				Structure range = stProp.getRange();
+				logger.debug("StructuredProperty:" + stProp.getRange());
 			}
 		}
 
