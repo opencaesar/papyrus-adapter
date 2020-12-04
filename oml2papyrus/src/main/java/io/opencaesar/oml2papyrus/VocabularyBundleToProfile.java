@@ -10,11 +10,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
 import org.eclipse.uml2.uml.Class;
+import org.eclipse.uml2.uml.Classifier;
+import org.eclipse.uml2.uml.Enumeration;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PrimitiveType;
@@ -60,6 +63,7 @@ public class VocabularyBundleToProfile {
 	private Model umlMetaModel;
 	private Map<Entity, Class> converted = new HashMap<>();
 	private Map<Vocabulary, Package> voc2Package = new HashMap<>();
+	private Classifier dependencyType;
 
 	private static Set<String> vocsToSkip = new HashSet<>();
 	static {
@@ -83,6 +87,7 @@ public class VocabularyBundleToProfile {
 
 		// Get the UML metamodel
 		umlMetaModel = ProfileUtils.getUMLMetamodel(outputResourceSet);
+		this.dependencyType = (Classifier)umlMetaModel.getOwnedType("Dependency");
 
 		// Create parent folder
 		URI iri = URI.createURI(rootOntology.getIri());
@@ -132,10 +137,12 @@ public class VocabularyBundleToProfile {
 			
 			// get all voc entities
 			extractEntitiesAndEnums(voc, entities, enums);
+			
 			if (!entities.isEmpty() || !enums.isEmpty()) {
 				pkg = getPackageForVoc(voc, profile);
 			}
 			convertEntities(profile, voc, pkg, entities);
+			convertEnums(profile,voc,pkg,enums);
 			logger.debug("================================================");
 		}
 
@@ -144,6 +151,18 @@ public class VocabularyBundleToProfile {
 
 		// update the generalizations
 		updateAllGeneralizations();
+	}
+
+	private void convertEnums(Profile profile, Vocabulary voc, Package pkg, List<EnumeratedScalar> enums) {
+		enums.forEach(enumType -> {
+			String name = enumType.getName();
+			EList<Literal> literals = enumType.getLiterals();
+			logger.debug("Enum : " + name);
+			final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
+			literals.forEach(literal -> {
+				umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
+			});
+		});
 	}
 
 	private void convertEntities(Profile profile, Vocabulary voc, Package pkg, List<Entity> entities) {
@@ -172,10 +191,10 @@ public class VocabularyBundleToProfile {
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
 		for (Vocabulary voc : allVoc) {
-			logger.info("Converting  : " + voc.getIri());
+			logger.debug("Converting  : " + voc.getIri());
 			// create the package for the voc
 			if (vocsToSkip.contains(voc.getIri())) {
-				logger.info("Skipping");
+				logger.debug("Skipping");
 				continue;
 			}
 			// get all voc entities
@@ -289,6 +308,9 @@ public class VocabularyBundleToProfile {
 		Class clazz = (Class) containerPackage.getPackagedElement(entity.getName());
 		if (clazz == null) {
 			clazz = ProfileUtils.createClass(containerPackage, entity.getName(), entity instanceof Aspect);
+			if (entity instanceof RelationEntity) {
+				clazz.createGeneralization(this.dependencyType);
+			}
 		}
 		converted.put(entity, clazz);
 		mapProperties(profile, clazz, entity);
