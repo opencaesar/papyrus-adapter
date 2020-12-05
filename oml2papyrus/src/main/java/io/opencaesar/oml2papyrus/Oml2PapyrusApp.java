@@ -17,6 +17,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 import org.eclipse.xtext.resource.XtextResourceSet;
 
@@ -55,6 +56,15 @@ public class Oml2PapyrusApp {
 			order=2
 	)
 	private String inputOntologyIri;
+
+	@Parameter(
+			names= {"--input-profile-path", "-p"}, 
+			description="Path of the input UML profile (Optional)", 
+			validateWith=InputProfilePath.class, 
+			required=false, 
+			order=2
+	)
+	private String inputProfilePath;
 
 	@Parameter(
 		names= {"--output-folder-path","-o"}, 
@@ -150,14 +160,20 @@ public class Oml2PapyrusApp {
 		UMLResourcesUtil.init(papyrusResourceSet);
 		Resource papyrusResource = null;
 		
-		// Papyrus folder
-		File papyrusFolder = new File(outputFolderPath);
+		// Output folder
+		File outputFolder = new File(outputFolderPath);
 
 		// Convert the input ontology to Papyrus resource
 		if (rootOntology instanceof VocabularyBundle) {
-			papyrusResource = new VocabularyBundleToProfile((VocabularyBundle)rootOntology, papyrusFolder, papyrusResourceSet, LOGGER).convert();
+			papyrusResource = new VocabularyBundleToProfile((VocabularyBundle)rootOntology, outputFolder, papyrusResourceSet, LOGGER).convert();
 		} else if (rootOntology instanceof DescriptionBundle) {
-			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, papyrusFolder, papyrusResourceSet, LOGGER).convert();
+			if (inputProfilePath == null) {
+				throw new ParameterException("Input profile path is not specified");
+			}
+			URI profileUri = URI.createFileURI(inputProfilePath);
+			Resource profileResource = papyrusResourceSet.getResource(profileUri, true);
+			Profile profile = (Profile) profileResource.getContents().get(0);
+			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, profile, outputFolder, papyrusResourceSet, LOGGER).convert();
 		}
 				
 		// save the Papyrus resources
@@ -195,7 +211,18 @@ public class Oml2PapyrusApp {
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
 			if (!file.getName().endsWith("catalog.xml")) {
-				throw new ParameterException("Parameter " + name + " should be a valid OML catalog path");
+				throw new ParameterException(value + " should be a valid OML catalog path");
+			}
+		}
+		
+	}
+
+	static public class InputProfilePath implements IParameterValidator {
+		@Override
+		public void validate(String name, String value) throws ParameterException {
+			final File file = new File(value);
+			if (!file.getName().endsWith("profile.uml") || !file.exists()) {
+				throw new ParameterException(value + " should be a valid UML profile path");
 			}
 		}
 		
@@ -208,7 +235,7 @@ public class Oml2PapyrusApp {
 			if (!directory.isDirectory()) {
 				directory.mkdirs();
 				if (!directory.isDirectory()) {
-					throw new ParameterException("Parameter " + name + " should be a valid folder path");
+					throw new ParameterException(value + " should be a valid folder path");
 				}
 			}
 	  	}

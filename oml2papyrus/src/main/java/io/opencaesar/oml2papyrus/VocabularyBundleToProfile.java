@@ -1,7 +1,6 @@
 package io.opencaesar.oml2papyrus;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -17,6 +16,7 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
 import org.eclipse.uml2.uml.Class;
 import org.eclipse.uml2.uml.Classifier;
+import org.eclipse.uml2.uml.DataType;
 import org.eclipse.uml2.uml.Enumeration;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
@@ -25,11 +25,11 @@ import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
-import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.CardinalityRestrictionKind;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
+import io.opencaesar.oml.FacetedScalar;
 import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Literal;
@@ -42,9 +42,9 @@ import io.opencaesar.oml.Scalar;
 import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.StructuredProperty;
+import io.opencaesar.oml.Type;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.VocabularyBundle;
-import io.opencaesar.oml.util.OmlIndex;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
@@ -52,7 +52,6 @@ import io.opencaesar.oml2papyrus.util.UmlUtils;
 
 public class VocabularyBundleToProfile {
 
-	private static final String IS_STEREOTYPE = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotype";
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
 	private VocabularyBundle rootOntology;
@@ -61,9 +60,8 @@ public class VocabularyBundleToProfile {
 	private Logger logger;
 
 	private Model umlMetaModel;
-	private Map<Entity, Class> converted = new HashMap<>();
-	private Map<Vocabulary, Package> voc2Package = new HashMap<>();
-	private Classifier dependencyType;
+	private Map<io.opencaesar.oml.Type, Classifier> converted = new HashMap<>();
+	//private Map<Vocabulary, Package> voc2Package = new HashMap<>();
 
 	private static Set<String> vocsToSkip = new HashSet<>();
 	static {
@@ -83,11 +81,9 @@ public class VocabularyBundleToProfile {
 	public Resource convert() throws Exception {
 		// Clear all caches
 		converted.clear();
-		voc2Package.clear();
 
 		// Get the UML metamodel
 		umlMetaModel = ProfileUtils.getUMLMetamodel(outputResourceSet);
-		this.dependencyType = (Classifier)umlMetaModel.getOwnedType("Dependency");
 
 		// Create parent folder
 		URI iri = URI.createURI(rootOntology.getIri());
@@ -120,9 +116,10 @@ public class VocabularyBundleToProfile {
 	private void populateProfile(Profile profile) {
 
 		List<Vocabulary> allVoc = OmlRead.getAllImportedOntologies(rootOntology).stream()
-				.filter(ontology -> ontology instanceof Vocabulary).map(ontology -> (Vocabulary) ontology)
+				.filter(ontology -> ontology instanceof Vocabulary)
+				.map(ontology -> (Vocabulary) ontology)
 				.collect(Collectors.toList());
-		// now we have all direct voc let's find the stereo types CI
+		// now we have all direct voc let's find the stereotypes CI
 		for (Vocabulary voc : allVoc) {
 			logger.debug("Converting  : " + voc.getIri());
 			// create the package for the voc
@@ -130,22 +127,28 @@ public class VocabularyBundleToProfile {
 				logger.debug("Skipping");
 				continue;
 			}
-			Package pkg = null;
 			
-			List<Entity> entities = new ArrayList<>();
-			List<EnumeratedScalar> enums = new ArrayList<>();
+			// get all voc types
+			List<Type> types = voc.getOwnedStatements().stream()
+					.filter(s -> s instanceof Type)
+					.map(s -> (Type)s)
+					.filter(t -> canConvert(t))
+					.collect(Collectors.toList());
 			
-			// get all voc entities
-			extractEntitiesAndEnums(voc, entities, enums);
-			
-			if (!entities.isEmpty() || !enums.isEmpty()) {
-				pkg = getPackageForVoc(voc, profile);
+			if (!types.isEmpty()) {
+				Package pkg = UmlUtils.getPackage(voc.getIri(), profile);
+
+				for (Type type : types) {
+					convertType(profile, voc, pkg, type);
+				};
 			}
-			convertEntities(profile, voc, pkg, entities);
-			convertEnums(profile,voc,pkg,enums);
+			
 			logger.debug("================================================");
 		}
 
+		// Properties
+		mapProperties(allVoc);
+		
 		// Relationships
 		updateRelationships(allVoc);
 
@@ -153,40 +156,47 @@ public class VocabularyBundleToProfile {
 		updateAllGeneralizations();
 	}
 
-	private void convertEnums(Profile profile, Vocabulary voc, Package pkg, List<EnumeratedScalar> enums) {
-		enums.forEach(enumType -> {
-			String name = enumType.getName();
-			EList<Literal> literals = enumType.getLiterals();
-			logger.debug("Enum : " + name);
-			final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
-			literals.forEach(literal -> {
-				umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
-			});
-		});
+	private boolean canConvert(Type type) {
+		return type instanceof Entity ||
+				type instanceof EnumeratedScalar;
 	}
 
-	private void convertEntities(Profile profile, Vocabulary voc, Package pkg, List<Entity> entities) {
-		for (Entity entity : entities) {
-			logger.debug("Converting : " + entity.getName());
-			StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
-			if (infoHolder != null) {
-				// SteroType
-				Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(),
-						entity instanceof Aspect, infoHolder.metaClasses);
-				logger.debug("Stereotype " + stereotype.getName() + " was created");
-			}
-			converEntity(profile, entity);
+	private void convertType(Profile profile, Vocabulary voc, Package pkg, Type type) {
+		if (type instanceof Entity) {
+			convertEntity(profile, voc, pkg, (Entity)type);
+		} else if (type instanceof EnumeratedScalar) {
+			convertEnum(profile, voc, pkg, (EnumeratedScalar)type);
 		}
 	}
+	
+	private void convertEnum(Profile profile, Vocabulary voc, Package pkg, EnumeratedScalar enumType) {
+		if (converted.containsKey(enumType)) {
+			return;
+		}
 
-	private void extractEntitiesAndEnums(Vocabulary voc, List<Entity> entities, List<EnumeratedScalar> enums) {
-		voc.getOwnedStatements().forEach(statement -> {
-			if (statement instanceof Entity) {
-				entities.add((Entity)statement);
-			}else if (statement instanceof EnumeratedScalar) {
-				enums.add((EnumeratedScalar)statement);
-			}
+		String name = enumType.getName();
+		EList<Literal> literals = enumType.getLiterals();
+		logger.debug("Enum : " + name);
+		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
+		literals.forEach(literal -> {
+			umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
 		});
+
+		converted.put(enumType, umlEnum);
+	}
+
+	private void convertEntity(Profile profile, Vocabulary voc, Package pkg, Entity entity) {
+		if (converted.containsKey(entity)) {
+			return;
+		}
+
+		logger.debug("Converting : " + entity.getName());
+		StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
+
+		Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(), entity instanceof Aspect, infoHolder.metaClasses);
+		logger.debug("Stereotype " + stereotype.getName() + " was created");
+
+		converted.put(entity, stereotype);
 	}
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
@@ -208,8 +218,8 @@ public class VocabularyBundleToProfile {
 				ReverseRelation trgRel = entity.getReverseRelation();
 				Entity src = srcRel.getDomain();
 				Entity trgt = srcRel.getRange();
-				Class srcClass = converted.get(src);
-				Class trgClass = converted.get(trgt);
+				Class srcClass = (Class) converted.get(src);
+				Class trgClass = (Class) converted.get(trgt);
 				boolean isFunctional = entity.isFunctional();
 				String end1Name = srcRel.getName();
 				boolean end1Navigable = true;
@@ -256,91 +266,75 @@ public class VocabularyBundleToProfile {
 	}
 
 	private StereoTypesInfo getStereoTypeInfo(Vocabulary voc, Entity entity) {
-		StereoTypesInfo infoHolder = null;
-		List<Annotation> annotations = OmlSearch.findAnnotations(entity);
-		for (Annotation annotation : annotations) {
-			if (IS_STEREOTYPE.equals(OmlRead.getIri(annotation.getProperty()))) {
-				infoHolder = new StereoTypesInfo(voc, entity);
-			} else if (IS_STEREOTYPE_OF.equals(OmlRead.getIri(annotation.getProperty()))) {
-				Literal value = annotation.getValue();
-				if (value instanceof QuotedLiteral) {
-					QuotedLiteral qLiteral = (QuotedLiteral) value;
-					String sValue = qLiteral.getValue();
-					if (infoHolder == null) {
-						infoHolder = new StereoTypesInfo(voc, entity);
-					}
-					infoHolder.addMetaClass(sValue.substring(sValue.indexOf(':') + 1));
-				}
+		StereoTypesInfo infoHolder = new StereoTypesInfo(voc, entity);
+		List<Literal> values = OmlSearch.findAnnotationValuesForIri(entity, IS_STEREOTYPE_OF);
+		for (Literal value : values) {
+			if (value instanceof QuotedLiteral) {
+				QuotedLiteral qLiteral = (QuotedLiteral) value;
+				String sValue = qLiteral.getValue();
+				infoHolder.addMetaClass(sValue.substring(sValue.indexOf(':') + 1));
 			}
 		}
 		return infoHolder;
 	}
 
 	private void updateAllGeneralizations() {
-		Set<Entity> keys = converted.keySet();
-		for (Entity entity : keys) {
-			Class clazz = converted.get(entity);
-			List<SpecializableTerm> specTerms = OmlSearch.findSpecializedTerms(entity);
-			for (SpecializableTerm term : specTerms) {
-				if (term instanceof Entity) {
-					Entity superEntity = (Entity) term;
-					Class superClazz = converted.get(superEntity);
-					clazz.createGeneralization(superClazz);
+		Set<Type> types = converted.keySet();
+		for (Type type : types) {
+			Classifier subClassifier = converted.get(type);
+			List<SpecializableTerm> superTerms = OmlSearch.findSpecializedTerms(type);
+			for (SpecializableTerm superTerm : superTerms) {
+				if (superTerm instanceof Type) {
+					Classifier superClassifier = converted.get(superTerm);
+					subClassifier.createGeneralization(superClassifier);
 				}
 			}
 		}
 	}
 
-	private Package getPackageForVoc(Vocabulary voc, Profile profile) {
-		Package pkg = voc2Package.get(voc);
-		if (pkg == null) {
-			pkg = UmlUtils.getPackage(voc.getIri(), profile);
-			voc2Package.put(voc, pkg);
-		}
-		return pkg;
-	}
-
-	private Class converEntity(Profile profile, Entity entity) {
-		if (converted.containsKey(entity)) {
-			return converted.get(entity);
-		}
-		Package containerPackage = getPackageForVoc(entity.getOwningVocabulary(), profile);
-		Class clazz = (Class) containerPackage.getPackagedElement(entity.getName());
-		if (clazz == null) {
-			clazz = ProfileUtils.createClass(containerPackage, entity.getName(), entity instanceof Aspect);
-			if (entity instanceof RelationEntity) {
-				clazz.createGeneralization(this.dependencyType);
+	private void mapProperties(List<Vocabulary> allVoc) {
+		for (Vocabulary voc : allVoc) {
+			// create the package for the voc
+			if (vocsToSkip.contains(voc.getIri())) {
+				logger.debug("Skipping");
+				continue;
+			}
+			// get all feature properties
+			List<FeatureProperty> props = voc.getOwnedStatements().stream()
+					.filter(s -> s instanceof FeatureProperty)
+					.map(s -> (FeatureProperty)s)
+					.collect(Collectors.toList());
+			for (FeatureProperty prop : props) {
+				if (prop instanceof ScalarProperty) {
+					ScalarProperty sProp = (ScalarProperty) prop;
+					Classifier classifier = converted.get(sProp.getDomain());
+					Scalar range = sProp.getRange();
+					DataType rangeClass = getTypeForRange(range);
+					if (classifier instanceof Class) {
+						((Class)classifier).createOwnedAttribute(prop.getName(), rangeClass);
+					}
+				} else if (prop instanceof StructuredProperty) {
+					StructuredProperty stProp = (StructuredProperty) prop;
+					logger.debug("StructuredProperty:" + stProp.getRange());
+				}
 			}
 		}
-		converted.put(entity, clazz);
-		mapProperties(profile, clazz, entity);
-		return clazz;
 	}
 
-	private void mapProperties(Package pkg, Class clazz, Entity entity) {
-		List<FeatureProperty> props = OmlIndex.findFeaturePropertiesWithDomain(entity);
-		for (FeatureProperty prop : props) {
-			if (prop instanceof ScalarProperty) {
-				ScalarProperty sProp = (ScalarProperty) prop;
-				Scalar range = sProp.getRange();
-				PrimitiveType rangeClass = getTypeForRange(pkg, range);
-				clazz.createOwnedAttribute(prop.getName(), rangeClass);
-			} else if (prop instanceof StructuredProperty) {
-				StructuredProperty stProp = (StructuredProperty) prop;
-				logger.debug("StructuredProperty:" + stProp.getRange());
+	private DataType getTypeForRange(Scalar range) {
+		if (range instanceof FacetedScalar) {
+			switch (range.getName()) {
+			case "string":
+				return (PrimitiveType) umlMetaModel.getMember("String");
+			case "integer":
+				return (PrimitiveType) umlMetaModel.getMember("Integer");
+			case "double":
+				return (PrimitiveType) umlMetaModel.getMember("Real");
+			case "boolean":
+				return (PrimitiveType) umlMetaModel.getMember("Boolean");
 			}
-		}
-
-	}
-
-	private PrimitiveType getTypeForRange(Package pkg, Scalar range) {
-		switch (range.getName()) {
-		case "string":
-			return (PrimitiveType) umlMetaModel.getMember("String");
-		case "integer":
-			return (PrimitiveType) umlMetaModel.getMember("Integer");
-		case "boolean":
-			return (PrimitiveType) umlMetaModel.getMember("Boolean");
+		} else if (range instanceof EnumeratedScalar) {
+			return (DataType) converted.get(range);
 		}
 		return null;
 	}
