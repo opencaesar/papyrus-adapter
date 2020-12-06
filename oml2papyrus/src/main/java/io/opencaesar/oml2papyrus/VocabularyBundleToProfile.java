@@ -36,6 +36,7 @@ import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.QuotedLiteral;
 import io.opencaesar.oml.RelationCardinalityRestrictionAxiom;
 import io.opencaesar.oml.RelationEntity;
+import io.opencaesar.oml.RelationRangeRestrictionAxiom;
 import io.opencaesar.oml.RelationRestrictionAxiom;
 import io.opencaesar.oml.ReverseRelation;
 import io.opencaesar.oml.Scalar;
@@ -61,6 +62,7 @@ public class VocabularyBundleToProfile {
 
 	private Model umlMetaModel;
 	private Map<io.opencaesar.oml.Type, Classifier> converted = new HashMap<>();
+	private Map<RelationEntity, AssociationInfo> relationToAssociationInfo = new HashMap<>();
 	//private Map<Vocabulary, Package> voc2Package = new HashMap<>();
 
 	private static Set<String> vocsToSkip = new HashSet<>();
@@ -112,6 +114,15 @@ public class VocabularyBundleToProfile {
 
 		return profile.eResource();
 	}
+	
+	
+	private boolean isFiltered(Vocabulary voc) {
+		if (vocsToSkip.contains(voc.getIri())) {
+			logger.debug("Skipping");
+			return true;
+		}
+		return false;
+	}
 
 	private void populateProfile(Profile profile) {
 
@@ -123,8 +134,7 @@ public class VocabularyBundleToProfile {
 		for (Vocabulary voc : allVoc) {
 			logger.debug("Converting  : " + voc.getIri());
 			// create the package for the voc
-			if (vocsToSkip.contains(voc.getIri())) {
-				logger.debug("Skipping");
+			if (isFiltered(voc)) {
 				continue;
 			}
 			
@@ -154,6 +164,41 @@ public class VocabularyBundleToProfile {
 
 		// update the generalizations
 		updateAllGeneralizations();
+		
+		// now we need to deal with restrictions (Range and Value)
+		updateRestrictions(allVoc);
+	}
+
+	private void updateRestrictions(List<Vocabulary> allVoc) {
+		Set<Type> convertedEntities = converted.keySet();
+		for (Type type : convertedEntities) {
+			if (type instanceof Entity) {
+				Entity entity = (Entity)type;
+				List<RelationRestrictionAxiom> restrictions = OmlSearch.findRelationRestrictions(entity);
+				for (RelationRestrictionAxiom axiom : restrictions) {
+					if (axiom instanceof RelationRangeRestrictionAxiom) {
+						RelationRangeRestrictionAxiom rangeRest = (RelationRangeRestrictionAxiom)axiom;
+						RelationEntity relEntity = OmlRead.getRelationEntity( rangeRest.getRelation());
+						Entity newRange = rangeRest.getRange();
+						AssociationInfo info = relationToAssociationInfo.get(relEntity);	
+						Classifier src = converted.get(entity);
+						Classifier newTrgt = converted.get(newRange);
+						src.createAssociation(info.end1Navigable,
+											  AggregationKind.NONE_LITERAL,
+											  info.end1Name,
+											  info.end1Lower,
+											  info.end1Upper,
+											  newTrgt,
+											  info.end2Navigable,
+											  AggregationKind.NONE_LITERAL,
+											  info.end2Name,
+											  info.end2Lower,
+											  info.end2Upper);
+					}
+				}
+			}
+		}
+		// get all voc entities
 	}
 
 	private boolean canConvert(Type type) {
@@ -203,8 +248,7 @@ public class VocabularyBundleToProfile {
 		for (Vocabulary voc : allVoc) {
 			logger.debug("Converting  : " + voc.getIri());
 			// create the package for the voc
-			if (vocsToSkip.contains(voc.getIri())) {
-				logger.debug("Skipping");
+			if (isFiltered(voc)) {
 				continue;
 			}
 			// get all voc entities
@@ -259,9 +303,50 @@ public class VocabularyBundleToProfile {
 						}
 					}
 				}
-				srcClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
-						trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
+				AssociationInfo aInfo = new AssociationInfo(trgClass,end1Name,end1Navigable,end1Lower,end1Upper,end2Name,end2Navigable,end2Lower,end2Upper);
+				relationToAssociationInfo.put(entity, aInfo);
+				srcClass.createAssociation(end1Navigable, 
+										   AggregationKind.NONE_LITERAL,
+										   end1Name,
+										   end1Lower,
+										   end1Upper,
+										   trgClass,
+										   end2Navigable,
+										   AggregationKind.NONE_LITERAL,
+										   end2Name,
+										   end2Lower,
+										   end2Upper);
 			}
+		}
+	}
+	
+	
+	private static class AssociationInfo {
+		public Class trgClass;
+		public String end1Name = "";
+		public boolean end1Navigable = true;
+		public String end2Name = "";
+		public boolean end2Navigable = false;
+		public int end1Lower = 0;
+		public int end1Upper = -1;
+		public int end2Lower = 0;
+		public int end2Upper = -1;
+		public AssociationInfo(Class trgtClass, String end1Name, boolean end1Navigable, int end1Lower, int end1Upper,
+							   String end2Name, boolean end2NAvigable, int end2Lower, int end2Upper) {
+			this.trgClass = trgtClass;
+			this.end1Name = end1Name;
+			this.end1Navigable = end1Navigable;
+			this.end1Lower = end1Lower;
+			this.end1Upper = end1Upper;
+			this.end2Name = end2Name;
+			this.end2Navigable = end2NAvigable;
+			this.end2Lower = end2Lower;
+			this.end2Upper = end2Upper;
+		}
+		
+		@Override
+		public String toString() {
+			return "Relation Entity for Target : " + trgClass.getName();
 		}
 	}
 
@@ -295,8 +380,7 @@ public class VocabularyBundleToProfile {
 	private void mapProperties(List<Vocabulary> allVoc) {
 		for (Vocabulary voc : allVoc) {
 			// create the package for the voc
-			if (vocsToSkip.contains(voc.getIri())) {
-				logger.debug("Skipping");
+			if (isFiltered(voc)) {
 				continue;
 			}
 			// get all feature properties
