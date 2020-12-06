@@ -17,6 +17,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 import org.eclipse.xtext.resource.XtextResourceSet;
 
@@ -169,7 +170,10 @@ public class Oml2PapyrusApp {
 			if (inputProfilePath == null) {
 				throw new ParameterException("Input profile path is not specified");
 			}
-			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, outputFolder, papyrusResourceSet, LOGGER).convert();
+			URI profileUri = URI.createFileURI(inputProfilePath);
+			Resource profileResource = papyrusResourceSet.getResource(profileUri, true);
+			Profile profile = (Profile) profileResource.getContents().get(0);
+			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, profile, outputFolder, papyrusResourceSet, LOGGER).convert();
 		}
 				
 		// save the Papyrus resources
