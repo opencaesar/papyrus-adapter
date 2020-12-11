@@ -268,12 +268,12 @@ public class Ecore2OmlConverter {
 			// For now read them by parsing the relation name
 			return sr.getName().split("_")[1];
 		} else {
-			RelationEntity superEntity = OmlRead.getSpecializedTerms(re).stream().
+			RelationEntity generalEntity = OmlRead.getGeneralTerms(re).stream().
 				filter(i -> i instanceof RelationEntity).
 				map(i -> (RelationEntity)i).
 				findAny().orElse(null);
-			if (superEntity != null) {
-				return getSourceEReferenceName(superEntity);
+			if (generalEntity != null) {
+				return getSourceEReferenceName(generalEntity);
 			}
 			return null;
 		}
@@ -286,12 +286,12 @@ public class Ecore2OmlConverter {
 			// For now read them by parsing the relation name
 			return tr.getName().split("_")[1];
 		} else {
-			RelationEntity superEntity = OmlRead.getSpecializedTerms(re).stream().
+			RelationEntity generalEntity = OmlRead.getGeneralTerms(re).stream().
 				filter(i -> i instanceof RelationEntity).
 				map(i -> (RelationEntity)i).
 				findAny().orElse(null);
-			if (superEntity != null) {
-				return getSourceEReferenceName(superEntity);
+			if (generalEntity != null) {
+				return getSourceEReferenceName(generalEntity);
 			}
 			return null;
 		}
