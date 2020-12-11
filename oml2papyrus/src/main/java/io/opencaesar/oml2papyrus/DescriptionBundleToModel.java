@@ -275,7 +275,16 @@ public class DescriptionBundleToModel {
 				Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(object.getProperty().getDomain()));
 				List<Stereotype> stereotypes = element.getAppliedSubstereotypes(stereotype);
 				for (Stereotype s : stereotypes) {
-					element.setValue(s, property.getName(), value);
+					if (!property.isFunctional()) {
+						// many
+						Object val = element.getValue(s,property.getName());
+						if (val instanceof List) {
+							//ugly
+							((List)val).add(value);
+						}
+					}else {
+						element.setValue(s, property.getName(), value);
+					}
 				}
 			} else {
 				EObject element = doSwitch(instance);
