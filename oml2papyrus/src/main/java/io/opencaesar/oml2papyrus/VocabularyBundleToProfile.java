@@ -383,11 +383,11 @@ public class VocabularyBundleToProfile {
 		Set<Type> types = converted.keySet();
 		for (Type type : types) {
 			Classifier subClassifier = converted.get(type);
-			List<SpecializableTerm> superTerms = OmlSearch.findSpecializedTerms(type);
-			for (SpecializableTerm superTerm : superTerms) {
-				if (superTerm instanceof Type) {
-					Classifier superClassifier = converted.get(superTerm);
-					subClassifier.createGeneralization(superClassifier);
+			List<SpecializableTerm> generalTerms = OmlSearch.findGeneralTerms(type);
+			for (SpecializableTerm generalTerm : generalTerms) {
+				if (generalTerm instanceof Type) {
+					Classifier generalClassifier = converted.get(generalTerm);
+					subClassifier.createGeneralization(generalClassifier);
 				}
 			}
 		}

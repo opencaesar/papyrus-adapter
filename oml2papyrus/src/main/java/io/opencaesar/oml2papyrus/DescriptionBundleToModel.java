@@ -267,7 +267,7 @@ public class DescriptionBundleToModel {
 
 		@Override
 		public EObject caseScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {
-			Object value = OmlRead.getLiteralValue(object.getValue());
+			Object value = OmlSearch.findTypedLiteralValue(object.getValue());
 			ScalarProperty property = object.getProperty();
 			Instance instance = OmlRead.getInstance(object);
 			if (instance instanceof NamedInstance) {
