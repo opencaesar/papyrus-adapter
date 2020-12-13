@@ -29,6 +29,14 @@ import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.UseCase;
 
 public class UmlUtils {
+	
+	public static String getUMLFirendlyName(String name) {
+		 char ch = name.charAt(0);
+         if(Character.isDigit(ch)) {
+        	 return "_" + name;
+         }
+         return name;
+	}
 
 	public static Model createModel(String modelName, String modelURI) {
 		Model model = UMLFactory.eINSTANCE.createModel();

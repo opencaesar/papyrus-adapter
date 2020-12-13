@@ -163,10 +163,10 @@ public class DescriptionBundleToModel {
 			if (metaclasses.isEmpty()) {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(concept)+" does not extend any metaclass");
 			}
-			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
+			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
 			
 			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			Element element = package_.createPackagedElement(object.getName(), eClass);
+			Element element = package_.createPackagedElement(UmlUtils.getUMLFirendlyName(object.getName()), eClass);
 			oml2EcoreMap.put(object, element);
 			
 			for (Concept aConcept : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
@@ -200,13 +200,13 @@ public class DescriptionBundleToModel {
 			if (metaclasses.isEmpty()) {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
 			}
-			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
+			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
 			if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
 			}
 			
 			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			DirectedRelationship relationship = (DirectedRelationship) package_.createPackagedElement(object.getName(), eClass);
+			DirectedRelationship relationship = (DirectedRelationship) package_.createPackagedElement(UmlUtils.getUMLFirendlyName(object.getName()), eClass);
 			oml2EcoreMap.put(object, relationship);
 	
 			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
@@ -241,7 +241,7 @@ public class DescriptionBundleToModel {
 			if (metaclasses.isEmpty()) {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
 			}
-			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
+			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
 			if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
 			}
@@ -265,6 +265,7 @@ public class DescriptionBundleToModel {
 			return relationship;
 		}
 
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public EObject caseScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {
 			Object value = OmlSearch.findTypedLiteralValue(object.getValue());
@@ -275,21 +276,23 @@ public class DescriptionBundleToModel {
 				Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(object.getProperty().getDomain()));
 				List<Stereotype> stereotypes = element.getAppliedSubstereotypes(stereotype);
 				for (Stereotype s : stereotypes) {
-					if (!property.isFunctional()) {
-						// many
-						Object val = element.getValue(s,property.getName());
-						if (val instanceof List) {
-							//ugly
-							((List)val).add(value);
-						}
-					}else {
+					// check for many
+					Object val = element.getValue(s,UmlUtils.getUMLFirendlyName(property.getName()));
+					if (val instanceof List) {
+						//ugly
+						((List)val).add(value);
+					} else {
 						element.setValue(s, property.getName(), value);
 					}
 				}
 			} else {
 				EObject element = doSwitch(instance);
 				EStructuralFeature feature = element.eClass().getEStructuralFeature(property.getName());
-				element.eSet(feature, value);
+				if (feature.isMany()) {
+					((List)element.eGet(feature,true)).add(value);
+				}else  {
+					element.eSet(feature, value);
+				}
 			}
 			return null;
 		}
