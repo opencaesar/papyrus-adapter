@@ -18,9 +18,11 @@ import org.eclipse.uml2.uml.DirectedRelationship;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.NamedElement;
+import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.Type;
+import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
@@ -29,6 +31,7 @@ import io.opencaesar.oml.ConceptInstance;
 import io.opencaesar.oml.ConceptTypeAssertion;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
+import io.opencaesar.oml.EnumeratedScalar;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Instance;
 import io.opencaesar.oml.LinkAssertion;
@@ -132,7 +135,7 @@ public class DescriptionBundleToModel {
 		@Override
 		protected EObject doSwitch(int classifierID, EObject theEObject) {
 			EObject result = oml2EcoreMap.get(theEObject);
-			if (!oml2EcoreMap.containsKey(theEObject)) {
+			if (result == null) {
 				result = super.doSwitch(classifierID, theEObject);
 			}
 			return result;
@@ -165,10 +168,13 @@ public class DescriptionBundleToModel {
 			}
 			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
 			
-			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			Element element = package_.createPackagedElement(UmlUtils.getUMLFirendlyName(object.getName()), eClass);
+			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
+			element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
 			oml2EcoreMap.put(object, element);
-			
+
+			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
+			package_.getPackagedElements().add(element);
+
 			for (Concept aConcept : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
 				Stereotype aStereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(aConcept));
 				if (aStereotype == null) {
@@ -205,27 +211,33 @@ public class DescriptionBundleToModel {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
 			}
 			
+			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
+			element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
+			oml2EcoreMap.put(object, element);
+
 			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			DirectedRelationship relationship = (DirectedRelationship) package_.createPackagedElement(UmlUtils.getUMLFirendlyName(object.getName()), eClass);
-			oml2EcoreMap.put(object, relationship);
+			package_.getPackagedElements().add(element);
 	
-			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
-			List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
-			UmlUtils.setSources(relationship, sources);
-			UmlUtils.setTargets(relationship, targets);
+			if (element instanceof DirectedRelationship) {
+				List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
+				List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
+				DirectedRelationship relationship = (DirectedRelationship)element;
+				UmlUtils.setSources(relationship, sources);
+				UmlUtils.setTargets(relationship, targets);
+			}
 			
 			for (RelationEntity aRelationEntity : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
 				Stereotype aStereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(aRelationEntity));
 				if (aStereotype == null) {
 					throw new IllegalArgumentException("stereotype "+OmlRead.getIri(aRelationEntity)+" is not found in the profile");
 				}
-				relationship.applyStereotype(aStereotype);
+				element.applyStereotype(aStereotype);
 			}
 			
 			OmlSearch.findLinkAssertionsWithSource(object).forEach(e -> doSwitch(e));
 			OmlSearch.findPropertyValueAssertions(object).forEach(e -> doSwitch(e));
 
-			return relationship;
+			return element;
 		}
 		
 		@Override
@@ -246,29 +258,38 @@ public class DescriptionBundleToModel {
 				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
 			}
 			
+			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
+			element.setName(null);
+			oml2EcoreMap.put(object, element);
+
 			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			DirectedRelationship relationship = (DirectedRelationship) package_.createPackagedElement(null, eClass);
-			oml2EcoreMap.put(object, relationship);
+			package_.getPackagedElements().add(element);
 	
-			NamedElement source = (NamedElement) doSwitch(OmlRead.getSource(object));
-			NamedElement target = (NamedElement) doSwitch(object.getTarget());
-			if (object.getRelation() instanceof ForwardRelation) {
-				UmlUtils.setSources(relationship, Collections.singletonList(source));
-				UmlUtils.setTargets(relationship, Collections.singletonList(target));
-			} else {
-				UmlUtils.setSources(relationship, Collections.singletonList(target));
-				UmlUtils.setTargets(relationship, Collections.singletonList(source));
+			if (element instanceof DirectedRelationship) {
+				NamedElement source = (NamedElement) doSwitch(OmlRead.getSource(object));
+				NamedElement target = (NamedElement) doSwitch(object.getTarget());
+				DirectedRelationship relationship = (DirectedRelationship)element;
+				if (object.getRelation() instanceof ForwardRelation) {
+					UmlUtils.setSources(relationship, Collections.singletonList(source));
+					UmlUtils.setTargets(relationship, Collections.singletonList(target));
+				} else {
+					UmlUtils.setSources(relationship, Collections.singletonList(target));
+					UmlUtils.setTargets(relationship, Collections.singletonList(source));
+				}
 			}
 			
-			relationship.applyStereotype(stereotype);
+			element.applyStereotype(stereotype);
 			
-			return relationship;
+			return element;
 		}
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public EObject caseScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {
 			Object value = OmlSearch.findJavaValue(object.getValue());
+			if (object.getProperty().getRange() instanceof EnumeratedScalar) {
+				value = UmlUtils.getUMLFirendlyName(value.toString()); 
+			}
 			ScalarProperty property = object.getProperty();
 			Instance instance = OmlRead.getInstance(object);
 			if (instance instanceof NamedInstance) {

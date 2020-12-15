@@ -300,9 +300,10 @@ public class VocabularyBundleToProfile {
 				continue;
 			}
 			// get all voc entities
-			List<RelationEntity> entities = voc.getOwnedStatements().stream().filter(statement -> {
-				return statement instanceof RelationEntity;
-			}).map(statement -> (RelationEntity) statement).collect(Collectors.toList());
+			List<RelationEntity> entities = voc.getOwnedStatements().stream()
+				.filter(statement -> statement instanceof RelationEntity)
+				.map(statement -> (RelationEntity) statement)
+				.collect(Collectors.toList());
 			for (RelationEntity entity : entities) {
 				logger.debug("Converting Relation: " + entity.getName());
 				logger.debug(entity);
