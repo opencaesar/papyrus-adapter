@@ -1,0 +1,14 @@
+ext.title = 'Papyrus'
+description = 'Papyrus Dependnecies'
+
+dependencies {
+ 	api files('libs/org.eclipse.emf.common_2.16.0.v20190625-1131.jar')
+	api files('libs/org.eclipse.emf.ecore_2.23.0.v20200630-0516.jar')
+	api files('libs/org.eclipse.emf.ecore.xmi_2.16.0.v20190528-0725.jar')
+	api files('libs/org.eclipse.emf.mapping.ecore2xml_2.11.0.v20180706-1146.jar')
+	api files('libs/org.eclipse.uml2.common_2.5.0.v20200302-1312.jar')
+	api files('libs/org.eclipse.uml2.types_2.5.0.v20200302-1312.jar')
+	api files('libs/org.eclipse.uml2.uml_5.5.0.v20200302-1312.jar')
+	api files('libs/org.eclipse.uml2.uml.profile.standard_1.5.0.v20200302-1312.jar')
+	api files('libs/org.eclipse.uml2.uml.resources_5.5.0.v20200302-1312.jar')
+}

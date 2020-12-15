@@ -6,7 +6,7 @@ mainClassName = 'io.opencaesar.papyrus2oml.Papyrus2OmlApp'
 applicationName = 'papyrus2oml'
 
 dependencies {
-	implementation project (':papyrus')
+	implementation project (':papyrus-dependencies')
  	implementation 'xml-resolver:xml-resolver:1.2'
     implementation "io.opencaesar.oml:io.opencaesar.oml.dsl:${versions.oml}"
 }

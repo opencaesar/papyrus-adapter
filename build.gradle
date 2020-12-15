@@ -51,6 +51,7 @@ subprojects {
 	    doLast {
 	        def version = project.version.toString()
 	        def file = new File("$projectDir/src/main/resources/version.txt")
+	        file.getParentFile().mkdirs();
 	        file.write(version)
 	    }
 	}
