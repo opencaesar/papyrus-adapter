@@ -5,10 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 
 import org.apache.log4j.Appender;
 import org.apache.log4j.AppenderSkeleton;
@@ -20,6 +17,8 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
+import org.eclipse.uml2.uml.Profile;
+import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 import org.eclipse.xtext.resource.XtextResourceSet;
 
 import com.beust.jcommander.IParameterValidator;
@@ -28,7 +27,9 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.io.CharStreams;
 
+import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Ontology;
+import io.opencaesar.oml.VocabularyBundle;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
@@ -38,7 +39,6 @@ public class Oml2PapyrusApp {
 
 	private static final String OML_EXTENSION = "oml";
 	private static final String OML_XMI_EXTENSION = "omlxmi";
-	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"txt", "pdf"});
 
 	@Parameter(
 			names= {"--input-catalog-path", "-i"}, 
@@ -56,6 +56,15 @@ public class Oml2PapyrusApp {
 			order=2
 	)
 	private String inputOntologyIri;
+
+	@Parameter(
+			names= {"--input-profile-path", "-p"}, 
+			description="Path of the input UML profile (Optional)", 
+			validateWith=InputProfilePath.class, 
+			required=false, 
+			order=2
+	)
+	private String inputProfilePath;
 
 	@Parameter(
 		names= {"--output-folder-path","-o"}, 
@@ -124,9 +133,6 @@ public class Oml2PapyrusApp {
 		OmlStandaloneSetup.doSetup();
 		OmlXMIResourceFactory.register();
 		
-		// create the Oml resource set
-		final XtextResourceSet omlResourceSet = new XtextResourceSet();
-
 		// load the Oml catalog (to load ontologies by IRI)
 		final URL catalogURL = new File(inputCatalogPath).toURI().toURL();
 		final OmlCatalog catalog = OmlCatalog.create(catalogURL);
@@ -139,30 +145,43 @@ public class Oml2PapyrusApp {
 		} else if (new File(baseIri.toFileString()+"."+OML_XMI_EXTENSION).exists()) {
 			ontologyUri = URI.createURI(baseIri+"."+OML_XMI_EXTENSION);
 		} else {
-			throw new RuntimeException("Ontology with iri '"+"' cannot be found in the catalog");
+			throw new RuntimeException("Ontology with iri '"+ baseIri + "' cannot be found in the catalog");
 		}
 		
+		// create the Oml resource set
+		final XtextResourceSet omlResourceSet = new XtextResourceSet();
+
 		// load the root ontology
 		final Resource ontologyResource = omlResourceSet.getResource(ontologyUri, true); 
 		final Ontology rootOntology = OmlRead.getOntology(ontologyResource);
 
 		// Create the papyrus resource set
-		ResourceSet papyrusResourceSet = new ResourceSetImpl();
+		final ResourceSet papyrusResourceSet = new ResourceSetImpl();
+		UMLResourcesUtil.init(papyrusResourceSet);
+		Resource papyrusResource = null;
 		
-		// Papyrus folder
-		File papyrusFolder = new File(outputFolderPath);
+		// Output folder
+		File outputFolder = new File(outputFolderPath);
 
-		// Convert the input ontology to Papyrus resources
-		Oml2PapyrusConverter converter = new Oml2PapyrusConverter(rootOntology, catalog, papyrusFolder, papyrusResourceSet, LOGGER);
-		List<Resource> papyrusResources = new ArrayList<>();
-		papyrusResources.addAll(converter.convert());
+		// Convert the input ontology to Papyrus resource
+		if (rootOntology instanceof VocabularyBundle) {
+			papyrusResource = new VocabularyBundleToProfile((VocabularyBundle)rootOntology, outputFolder, papyrusResourceSet, LOGGER).convert();
+		} else if (rootOntology instanceof DescriptionBundle) {
+			if (inputProfilePath == null) {
+				throw new ParameterException("Input profile path is not specified");
+			}
+			URI profileUri = URI.createFileURI(inputProfilePath);
+			Resource profileResource = papyrusResourceSet.getResource(profileUri, true);
+			Profile profile = (Profile) profileResource.getContents().get(0);
+			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, profile, outputFolder, papyrusResourceSet, LOGGER).convert();
+		}
 				
 		// save the Papyrus resources
-		for (Resource resource : papyrusResources) {
-			LOGGER.info("Saving: "+resource.getURI());
-			resource.save(Collections.EMPTY_MAP);
+		if (papyrusResource != null) {
+			LOGGER.info("Saving: "+papyrusResource.getURI());
+			papyrusResource.save(Collections.EMPTY_MAP);
 		}
-
+		
 		LOGGER.info("=================================================================");
 		LOGGER.info("                          E N D");
 		LOGGER.info("=================================================================");
@@ -192,7 +211,18 @@ public class Oml2PapyrusApp {
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
 			if (!file.getName().endsWith("catalog.xml")) {
-				throw new ParameterException("Parameter " + name + " should be a valid OML catalog path");
+				throw new ParameterException(value + " should be a valid OML catalog path");
+			}
+		}
+		
+	}
+
+	static public class InputProfilePath implements IParameterValidator {
+		@Override
+		public void validate(String name, String value) throws ParameterException {
+			final File file = new File(value);
+			if (!file.getName().endsWith("profile.uml") || !file.exists()) {
+				throw new ParameterException(value + " should be a valid UML profile path");
 			}
 		}
 		
@@ -205,7 +235,7 @@ public class Oml2PapyrusApp {
 			if (!directory.isDirectory()) {
 				directory.mkdirs();
 				if (!directory.isDirectory()) {
-					throw new ParameterException("Parameter " + name + " should be a valid folder path");
+					throw new ParameterException(value + " should be a valid folder path");
 				}
 			}
 	  	}
