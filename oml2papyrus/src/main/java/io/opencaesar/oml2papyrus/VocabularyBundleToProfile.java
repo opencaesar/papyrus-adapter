@@ -18,8 +18,11 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
 import org.eclipse.uml2.uml.Class;
 import org.eclipse.uml2.uml.Classifier;
+import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.DataType;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Enumeration;
+import org.eclipse.uml2.uml.Generalization;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PrimitiveType;
@@ -28,6 +31,8 @@ import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
+import io.opencaesar.oml.AnnotatedElement;
+import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.CardinalityRestrictionKind;
 import io.opencaesar.oml.Entity;
@@ -54,6 +59,7 @@ import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.Type;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.VocabularyBundle;
+import io.opencaesar.oml.util.OmlConstants;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml2papyrus.util.ProfileUtils;
@@ -114,7 +120,9 @@ public class VocabularyBundleToProfile {
 
 		// Create the profile
 		Profile profile = ProfileUtils.createProfile(outputResourceSet, outputResourceUri, rootOntology.getPrefix(), rootOntology.getIri());
-
+		
+		convertAnnotations(profile, rootOntology);
+		
 		// Populate the profile
 		populateProfile(profile);
 
@@ -139,6 +147,7 @@ public class VocabularyBundleToProfile {
 				.filter(ontology -> ontology instanceof Vocabulary)
 				.map(ontology -> (Vocabulary) ontology)
 				.collect(Collectors.toList());
+		
 		// now we have all direct voc let's find the stereotypes CI
 		for (Vocabulary voc : allVoc) {
 			logger.debug("Converting  : " + voc.getIri());
@@ -147,20 +156,7 @@ public class VocabularyBundleToProfile {
 				continue;
 			}
 			
-			// get all voc types
-			List<Type> types = voc.getOwnedStatements().stream()
-					.filter(s -> s instanceof Type)
-					.map(s -> (Type)s)
-					.filter(t -> canConvert(t))
-					.collect(Collectors.toList());
-			
-			if (!types.isEmpty()) {
-				Package pkg = UmlUtils.getPackage(voc.getIri(), profile);
-
-				for (Type type : types) {
-					convertType(profile, voc, pkg, type);
-				};
-			}
+			convertVocabulary(profile, voc);
 			
 			logger.debug("================================================");
 		}
@@ -178,47 +174,35 @@ public class VocabularyBundleToProfile {
 		updateRestrictions(allVoc);
 	}
 
-	private void updateRestrictions(List<Vocabulary> allVoc) {
-		Set<Type> convertedEntities = converted.keySet();
-		for (Type type : convertedEntities) {
-			if (type instanceof Entity) {
-				Entity entity = (Entity)type;
-				List<RelationRestrictionAxiom> restrictions = entity.getOwnedRelationRestrictions();
-				for (RelationRestrictionAxiom axiom : restrictions) {
-					if (axiom instanceof RelationRangeRestrictionAxiom) {
-						// only for kind.all
-						// for sum this will be a constraint in the future
-						RelationRangeRestrictionAxiom rangeRest = (RelationRangeRestrictionAxiom)axiom;
-						if (rangeRest.getKind()==RangeRestrictionKind.ALL) {
-							boolean reverse = false;
-							Relation relation = rangeRest.getRelation();
-							if (relation instanceof ReverseRelation) {
-								reverse = true;
-							}
-							RelationEntity relEntity = OmlRead.getRelationEntity( rangeRest.getRelation());
-							Entity newRange = rangeRest.getRange();
-							AssociationInfo info = relationToAssociationInfo.get(relEntity);	
-							Classifier src = converted.get(entity);
-							Classifier newTrgt = converted.get(newRange);
-							if (reverse) {
-								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper);
-							}else {
-								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper);
-
-							}
-						}
-					}
-				}
+	private void convertAnnotations(Element umlElement, AnnotatedElement omlElement) {
+		List<Annotation> annotations = OmlSearch.findAnnotations(omlElement);
+		for (Annotation annotation : annotations) {
+			if (OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.DC_NS+"description") ||
+				OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.RDFS_NS+"comment")) {
+				Comment comment = umlElement.createOwnedComment();
+				comment.setBody(OmlRead.getLexicalValue(annotation.getValue()));
 			}
 		}
-		// get all voc entities
 	}
+	
+	private void convertVocabulary(Profile profile, Vocabulary voc) {
+		// get all voc types
+		List<Type> types = voc.getOwnedStatements().stream()
+				.filter(s -> s instanceof Type)
+				.map(s -> (Type)s)
+				.filter(t -> canConvert(t))
+				.collect(Collectors.toList());
+		
+		if (!types.isEmpty()) {
+			Package pkg = UmlUtils.getPackage(voc.getIri(), profile);
+			convertAnnotations(pkg, voc);
 
-	private boolean canConvert(Type type) {
-		return type instanceof Entity ||
-				type instanceof EnumeratedScalar;
+			for (Type type : types) {
+				convertType(profile, voc, pkg, type);
+			};
+		}
 	}
-
+	
 	private void convertType(Profile profile, Vocabulary voc, Package pkg, Type type) {
 		if (type instanceof Entity) {
 			convertEntity(profile, voc, pkg, (Entity)type);
@@ -227,22 +211,6 @@ public class VocabularyBundleToProfile {
 		}
 	}
 	
-	private void convertEnum( Package pkg, EnumeratedScalar enumType) {
-		if (converted.containsKey(enumType)) {
-			return;
-		}
-
-		String name = UmlUtils.getUMLFirendlyName(enumType.getName());
-		EList<Literal> literals = enumType.getLiterals();
-		logger.debug("Enum : " + name);
-		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
-		literals.forEach(literal -> {
-			umlEnum.createOwnedLiteral(UmlUtils.getUMLFirendlyName(OmlRead.getLexicalValue(literal)));
-		});
-
-		converted.put(enumType, umlEnum);
-	}
-
 	private void convertEntity(Profile profile, Vocabulary voc, Package pkg, Entity entity) {
 		if (converted.containsKey(entity)) {
 			return;
@@ -255,6 +223,8 @@ public class VocabularyBundleToProfile {
 		converted.put(entity, stereotype);
 		logger.debug("Stereotype " + stereotype.getName() + " was created");
 		
+		convertAnnotations(stereotype, entity);
+
 		EList<PropertyRestrictionAxiom> propRestrictions = entity.getOwnedPropertyRestrictions();
 		Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions = getMappedRestrictions(propRestrictions);
 		
@@ -273,22 +243,65 @@ public class VocabularyBundleToProfile {
 		}
 	}
 
-	private Map<ScalarProperty, List<PropertyRestrictionAxiom>> getMappedRestrictions(
-			EList<PropertyRestrictionAxiom> propRestrictions) {
-		Map<ScalarProperty,List<PropertyRestrictionAxiom>> propToRestirctions = new HashMap<>();
-		for (PropertyRestrictionAxiom propRest : propRestrictions) {
-			if (propRest instanceof ScalarPropertyRestrictionAxiom) {
-				ScalarPropertyRestrictionAxiom card = (ScalarPropertyRestrictionAxiom) propRest;
-				ScalarProperty prop = card.getProperty();
-				List<PropertyRestrictionAxiom> restrictions = propToRestirctions.get(prop);
-				if (restrictions==null) {
-					restrictions = new ArrayList<>();
-					propToRestirctions.put(prop, restrictions);
+	private void convertEnum( Package pkg, EnumeratedScalar enumType) {
+		if (converted.containsKey(enumType)) {
+			return;
+		}
+
+		String name = UmlUtils.getUMLFirendlyName(enumType.getName());
+		EList<Literal> literals = enumType.getLiterals();
+		logger.debug("Enum : " + name);
+		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
+
+		convertAnnotations(umlEnum, enumType);
+
+		literals.forEach(literal -> {
+			umlEnum.createOwnedLiteral(UmlUtils.getUMLFirendlyName(OmlRead.getLexicalValue(literal)));
+		});
+
+		converted.put(enumType, umlEnum);
+	}
+
+	private void convertProperty(Package pkg, ScalarProperty prop, io.opencaesar.oml.Classifier entity, Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions) {
+		int upper = -1;
+		int lower = 0;
+		Scalar range = prop.getRange();
+		if (range instanceof EnumeratedScalar) {
+			convertEnum( pkg, (EnumeratedScalar) range);
+		}
+		
+		if (prop.isFunctional()) {
+			upper = 1;
+		}
+		
+		
+		List<PropertyRestrictionAxiom> axioms = propToRestirctions.get(prop);
+		if (axioms!=null) {
+			for (PropertyRestrictionAxiom rest : axioms) {
+				if (rest instanceof ScalarPropertyCardinalityRestrictionAxiom ) {
+					ScalarPropertyCardinalityRestrictionAxiom card = (ScalarPropertyCardinalityRestrictionAxiom)rest;
+					if (card.getKind() == CardinalityRestrictionKind.MIN) {
+						lower = (int) card.getCardinality();
+					} else if (card.getKind() == CardinalityRestrictionKind.MAX) {
+						upper = (int) card.getCardinality();
+					}
+				}else if (rest instanceof ScalarPropertyRangeRestrictionAxiom) {
+					ScalarPropertyRangeRestrictionAxiom rangeAxiom = (ScalarPropertyRangeRestrictionAxiom)rest;
+					range = rangeAxiom.getRange();
 				}
-				restrictions.add(propRest);
 			}
 		}
-		return propToRestirctions;
+		
+		Classifier classifier = converted.get(entity);
+		DataType rangeClass = getTypeForRange(range);
+		if (classifier instanceof Class) {
+			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
+			
+			convertAnnotations(umlProperty, prop);
+			
+			umlProperty.setLower(lower);
+			umlProperty.setUpper(upper);
+		}
 	}
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
@@ -365,6 +378,84 @@ public class VocabularyBundleToProfile {
 			}
 		}
 	}
+
+	private void updateAllGeneralizations() {
+		Set<Type> types = converted.keySet();
+		for (Type type : types) {
+			if (type instanceof io.opencaesar.oml.Classifier) {
+				Classifier subClassifier = converted.get(type);
+				List<SpecializableTerm> generalTerms = OmlSearch.findGeneralTerms(type);
+				for (SpecializableTerm generalTerm : generalTerms) {
+					if (generalTerm instanceof Type) {
+						Classifier generalClassifier = converted.get(generalTerm);
+						
+						Generalization gen = subClassifier.createGeneralization(generalClassifier);
+						
+						convertAnnotations(gen, generalTerm);
+					}
+				}
+			}
+		}
+	}
+
+	private void updateRestrictions(List<Vocabulary> allVoc) {
+		Set<Type> convertedEntities = converted.keySet();
+		for (Type type : convertedEntities) {
+			if (type instanceof Entity) {
+				Entity entity = (Entity)type;
+				List<RelationRestrictionAxiom> restrictions = entity.getOwnedRelationRestrictions();
+				for (RelationRestrictionAxiom axiom : restrictions) {
+					if (axiom instanceof RelationRangeRestrictionAxiom) {
+						// only for kind.all
+						// for sum this will be a constraint in the future
+						RelationRangeRestrictionAxiom rangeRest = (RelationRangeRestrictionAxiom)axiom;
+						if (rangeRest.getKind()==RangeRestrictionKind.ALL) {
+							boolean reverse = false;
+							Relation relation = rangeRest.getRelation();
+							if (relation instanceof ReverseRelation) {
+								reverse = true;
+							}
+							RelationEntity relEntity = OmlRead.getRelationEntity( rangeRest.getRelation());
+							Entity newRange = rangeRest.getRange();
+							AssociationInfo info = relationToAssociationInfo.get(relEntity);	
+							Classifier src = converted.get(entity);
+							Classifier newTrgt = converted.get(newRange);
+							if (reverse) {
+								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper);
+							}else {
+								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper);
+
+							}
+						}
+					}
+				}
+			}
+		}
+		// get all voc entities
+	}
+
+	private boolean canConvert(Type type) {
+		return type instanceof Entity || type instanceof EnumeratedScalar;
+	}
+
+	private Map<ScalarProperty, List<PropertyRestrictionAxiom>> getMappedRestrictions(
+			EList<PropertyRestrictionAxiom> propRestrictions) {
+		Map<ScalarProperty,List<PropertyRestrictionAxiom>> propToRestirctions = new HashMap<>();
+		for (PropertyRestrictionAxiom propRest : propRestrictions) {
+			if (propRest instanceof ScalarPropertyRestrictionAxiom) {
+				ScalarPropertyRestrictionAxiom card = (ScalarPropertyRestrictionAxiom) propRest;
+				ScalarProperty prop = card.getProperty();
+				List<PropertyRestrictionAxiom> restrictions = propToRestirctions.get(prop);
+				if (restrictions==null) {
+					restrictions = new ArrayList<>();
+					propToRestirctions.put(prop, restrictions);
+				}
+				restrictions.add(propRest);
+			}
+		}
+		return propToRestirctions;
+	}
+
 	
 	static class AssociationKey {
 		Classifier src;
@@ -423,7 +514,6 @@ public class VocabularyBundleToProfile {
 		}
 	}
 	
-
 	private void createAssociation(Classifier srcClass, Classifier trgClass, String end1Name, boolean end1Navigable,
 			String end2Name, boolean end2Navigable, int end1Lower, int end1Upper, int end2Lower, int end2Upper) {
 		AssociationKey key = new AssociationKey(srcClass,end1Name,trgClass,end2Name);
@@ -506,61 +596,6 @@ public class VocabularyBundleToProfile {
 			}
 		}
 		return infoHolder;
-	}
-
-	private void updateAllGeneralizations() {
-		Set<Type> types = converted.keySet();
-		for (Type type : types) {
-			if (type instanceof io.opencaesar.oml.Classifier) {
-				Classifier subClassifier = converted.get(type);
-				List<SpecializableTerm> generalTerms = OmlSearch.findGeneralTerms(type);
-				for (SpecializableTerm generalTerm : generalTerms) {
-					if (generalTerm instanceof Type) {
-						Classifier generalClassifier = converted.get(generalTerm);
-						subClassifier.createGeneralization(generalClassifier);
-					}
-				}
-			}
-		}
-	}
-
-	private void convertProperty(Package pkg, ScalarProperty prop, io.opencaesar.oml.Classifier entity, Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions) {
-		int upper = -1;
-		int lower = 0;
-		Scalar range = prop.getRange();
-		if (range instanceof EnumeratedScalar) {
-			convertEnum( pkg, (EnumeratedScalar) range);
-		}
-		
-		if (prop.isFunctional()) {
-			upper = 1;
-		}
-		
-		
-		List<PropertyRestrictionAxiom> axioms = propToRestirctions.get(prop);
-		if (axioms!=null) {
-			for (PropertyRestrictionAxiom rest : axioms) {
-				if (rest instanceof ScalarPropertyCardinalityRestrictionAxiom ) {
-					ScalarPropertyCardinalityRestrictionAxiom card = (ScalarPropertyCardinalityRestrictionAxiom)rest;
-					if (card.getKind() == CardinalityRestrictionKind.MIN) {
-						lower = (int) card.getCardinality();
-					} else if (card.getKind() == CardinalityRestrictionKind.MAX) {
-						upper = (int) card.getCardinality();
-					}
-				}else if (rest instanceof ScalarPropertyRangeRestrictionAxiom) {
-					ScalarPropertyRangeRestrictionAxiom rangeAxiom = (ScalarPropertyRangeRestrictionAxiom)rest;
-					range = rangeAxiom.getRange();
-				}
-			}
-		}
-		
-		Classifier classifier = converted.get(entity);
-		DataType rangeClass = getTypeForRange(range);
-		if (classifier instanceof Class) {
-			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
-			umlProperty.setLower(lower);
-			umlProperty.setUpper(upper);
-		}
 	}
 
 	private DataType getTypeForRange(Scalar range) {
