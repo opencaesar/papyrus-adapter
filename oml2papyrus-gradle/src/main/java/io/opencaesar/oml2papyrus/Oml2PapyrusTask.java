@@ -9,9 +9,9 @@ import org.gradle.api.tasks.TaskExecutionException;
 
 public class Oml2PapyrusTask extends DefaultTask {
 	
-	public String inputCatalogPath = null;
-
 	public String inputOntologyPath = null;
+
+	public String inputProfilePath = null;
 
 	public String outputFolderPath = null;
 	
@@ -20,13 +20,13 @@ public class Oml2PapyrusTask extends DefaultTask {
     @TaskAction
     public void run() {
         List<String> args = new ArrayList<String>();
-        if (inputCatalogPath != null) {
-		    args.add("-i");
-		    args.add(inputCatalogPath);
-        }
         if (inputOntologyPath != null) {
-		    args.add("-r");
+		    args.add("-i");
 		    args.add(inputOntologyPath);
+        }
+        if (inputProfilePath != null) {
+		    args.add("-p");
+		    args.add(inputProfilePath);
         }
         if (outputFolderPath != null) {
 		    args.add("-o");

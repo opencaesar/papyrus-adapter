@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.Collections;
 
 import org.apache.log4j.Appender;
@@ -31,31 +30,18 @@ import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.VocabularyBundle;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
-import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlXMIResourceFactory;
 
 public class Oml2PapyrusApp {
 
-	private static final String OML_EXTENSION = "oml";
-	private static final String OML_XMI_EXTENSION = "omlxmi";
-
 	@Parameter(
-			names= {"--input-catalog-path", "-i"}, 
-			description="Path to the input OML catalog file (Required)", 
-			validateWith=InputCatalogPath.class, 
-			required=true, 
-			order=1
-	)
-	private String inputCatalogPath;
-
-	@Parameter(
-			names= {"--input-ontology-iri", "-r"}, 
+			names= {"--input-ontology-path", "-i"}, 
 			description="IRI of the input OML ontology (Required)", 
 			required=true, 
 			order=2
 	)
-	private String inputOntologyIri;
+	private String inputOntologyPath;
 
 	@Parameter(
 			names= {"--input-profile-path", "-p"}, 
@@ -125,28 +111,16 @@ public class Oml2PapyrusApp {
 		LOGGER.info("                        S T A R T");
 		LOGGER.info("                      Oml to Papyrus "+getAppVersion());
 		LOGGER.info("=================================================================");
-		LOGGER.info("Input Catalog Path= " + inputCatalogPath);
-		LOGGER.info("Input Ontology Iri= " + inputOntologyIri);
+		LOGGER.info("Input Ontology Path= " + inputOntologyPath);
+		LOGGER.info("Input Profile Path= " + inputProfilePath);
 		LOGGER.info("Output Folder Path= " + outputFolderPath);
 		
 		// load the Oml language
 		OmlStandaloneSetup.doSetup();
 		OmlXMIResourceFactory.register();
-		
-		// load the Oml catalog (to load ontologies by IRI)
-		final URL catalogURL = new File(inputCatalogPath).toURI().toURL();
-		final OmlCatalog catalog = OmlCatalog.create(catalogURL);
-		
+				
 		// find the root ontology given its URI
-		final URI baseIri = URI.createURI(catalog.resolveURI(inputOntologyIri));
-		final URI ontologyUri;
-		if (new File(baseIri.toFileString()+"."+OML_EXTENSION).exists()) {
-			ontologyUri = URI.createURI(baseIri+"."+OML_EXTENSION);
-		} else if (new File(baseIri.toFileString()+"."+OML_XMI_EXTENSION).exists()) {
-			ontologyUri = URI.createURI(baseIri+"."+OML_XMI_EXTENSION);
-		} else {
-			throw new RuntimeException("Ontology with iri '"+ baseIri + "' cannot be found in the catalog");
-		}
+		final URI ontologyUri = URI.createFileURI(inputOntologyPath);
 		
 		// create the Oml resource set
 		final XtextResourceSet omlResourceSet = new XtextResourceSet();

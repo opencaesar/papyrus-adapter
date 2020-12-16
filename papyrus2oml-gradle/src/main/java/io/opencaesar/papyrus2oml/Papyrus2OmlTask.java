@@ -25,7 +25,7 @@ public class Papyrus2OmlTask extends DefaultTask {
 		    args.add(inputFolderPath);
         }
         if (inputModelPath != null) {
-		    args.add("-r");
+		    args.add("-m");
 		    args.add(inputModelPath);
         }
         if (outputCatalogPath != null) {

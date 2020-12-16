@@ -42,7 +42,7 @@ public class Papyrus2OmlApp {
 	private String inputFolderPath = null;
 
 	@Parameter(
-			names= {"--input-model-path","-r"}, 
+			names= {"--input-model-path","-m"}, 
 			description="Path to the root UML2 model file (Required)",
 			validateWith=InputFilePath.class, 
 			required=true, 
