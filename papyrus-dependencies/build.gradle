@@ -2,5 +2,5 @@ ext.title = 'Papyrus'
 description = 'Papyrus Dependnecies'
 
 dependencies {
-	implementation fileTree(dir: 'libs', include: '*.jar')
+	api fileTree(dir: 'libs', include: '*.jar')
 }
