@@ -14,8 +14,8 @@ Windows
 ```
 Args
 ```
---input-catalog-path | -o path/to/input/oml/catalog.oml [Required]
---input-ontology-iri | -o iri [Required]
+--input-ontology-path, -i path/to/input/oml/file [Required]
+--input-profile-path, -p path/to/input/profile/file [Optional]
 --output-folder-path | -i path/to/output/papyrus/folder [Required]
 ```
 
