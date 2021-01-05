@@ -32,8 +32,8 @@ buildscript {
 	}
 }
 task oml2papyrus(type:io.opencaesar.oml2papyrus.Oml2PapryusTask) {
-	inputCatalogPath = file('path/to/input/oml/catalog.xml') [Required]
-	inputOntologyIri = 'iri' [Required]
+	inputOontologyPath = file('path/to/input/ontology.oml') [Required]
+	inputProfilePath = file('path/to/input/profile.uml') [Optional]
 	outputFolderPath = file('path/to/output/papyrus/folder') [Required]
 }               
 ```
