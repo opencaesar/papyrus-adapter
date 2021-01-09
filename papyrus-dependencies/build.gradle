@@ -2,5 +2,12 @@ ext.title = 'Papyrus'
 description = 'Papyrus Dependnecies'
 
 dependencies {
-	api fileTree(dir: 'libs', include: '*.jar')
+	compile fileTree(dir: 'libs', include: '*.jar')
+}
+
+
+jar {
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
