@@ -56,6 +56,8 @@ import io.opencaesar.oml.ScalarPropertyCardinalityRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRangeRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRestrictionAxiom;
 import io.opencaesar.oml.SpecializableTerm;
+import io.opencaesar.oml.Structure;
+import io.opencaesar.oml.StructuredProperty;
 import io.opencaesar.oml.Type;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.VocabularyBundle;
@@ -144,7 +146,9 @@ public class VocabularyBundleToProfile {
 	private void populateProfile(Profile profile) {
 
 		List<Vocabulary> allVoc = OmlRead.getAllImportedOntologies(rootOntology).stream()
-				.filter(ontology -> ontology instanceof Vocabulary)
+				.filter(ontology ->  {
+					return ontology instanceof Vocabulary && !isFiltered((Vocabulary)ontology);
+				} )
 				.map(ontology -> (Vocabulary) ontology)
 				.collect(Collectors.toList());
 		
@@ -155,14 +159,12 @@ public class VocabularyBundleToProfile {
 			if (isFiltered(voc)) {
 				continue;
 			}
-			
 			convertVocabulary(profile, voc);
-			
 			logger.debug("================================================");
 		}
 
 		// Properties
-		//mapProperties(allVoc);
+		convertAllProperties(profile,allVoc);
 		
 		// Relationships
 		updateRelationships(allVoc);
@@ -172,6 +174,25 @@ public class VocabularyBundleToProfile {
 		
 		// now we need to deal with restrictions (Range and Value)
 		updateRestrictions(allVoc);
+	}
+
+	private void convertAllProperties(Profile profile, List<Vocabulary> allVoc) {
+		for (Vocabulary voc : allVoc) {
+			List<Type> types = voc.getOwnedStatements().stream()
+					.filter(s -> s instanceof Type)
+					.map(s -> (Type)s)
+					.filter(t -> canConvert(t))
+					.collect(Collectors.toList());
+			if (!types.isEmpty()) {
+				for (Type type : types) {
+					if (type instanceof Entity) {
+						Package pkg = UmlUtils.getPackage(voc.getIri(), profile);
+						convertProperties(pkg,(Entity) type);
+					}
+				};
+			}
+		}
+		
 	}
 
 	private void convertAnnotations(Element umlElement, AnnotatedElement omlElement) {
@@ -192,14 +213,12 @@ public class VocabularyBundleToProfile {
 				.map(s -> (Type)s)
 				.filter(t -> canConvert(t))
 				.collect(Collectors.toList());
-		
 		if (!types.isEmpty()) {
 			Package pkg = UmlUtils.getPackage(voc.getIri(), profile);
 			convertAnnotations(pkg, voc);
-
 			for (Type type : types) {
 				convertType(profile, voc, pkg, type);
-			};
+			}
 		}
 	}
 	
@@ -224,7 +243,9 @@ public class VocabularyBundleToProfile {
 		logger.debug("Stereotype " + stereotype.getName() + " was created");
 		
 		convertAnnotations(stereotype, entity);
+	}
 
+	private void convertProperties(Package pkg, Entity entity) {
 		EList<PropertyRestrictionAxiom> propRestrictions = entity.getOwnedPropertyRestrictions();
 		Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions = getMappedRestrictions(propRestrictions);
 		
@@ -247,7 +268,6 @@ public class VocabularyBundleToProfile {
 		if (converted.containsKey(enumType)) {
 			return;
 		}
-
 		String name = UmlUtils.getUMLFirendlyName(enumType.getName());
 		EList<Literal> literals = enumType.getLiterals();
 		logger.debug("Enum : " + name);
@@ -266,14 +286,9 @@ public class VocabularyBundleToProfile {
 		int upper = -1;
 		int lower = 0;
 		Scalar range = prop.getRange();
-		if (range instanceof EnumeratedScalar) {
-			convertEnum( pkg, (EnumeratedScalar) range);
-		}
-		
 		if (prop.isFunctional()) {
 			upper = 1;
 		}
-		
 		
 		List<PropertyRestrictionAxiom> axioms = propToRestirctions.get(prop);
 		if (axioms!=null) {
@@ -308,10 +323,6 @@ public class VocabularyBundleToProfile {
 		// value restriction is a place holder
 		for (Vocabulary voc : allVoc) {
 			logger.debug("Converting  : " + voc.getIri());
-			// create the package for the voc
-			if (isFiltered(voc)) {
-				continue;
-			}
 			// get all voc entities
 			List<RelationEntity> entities = voc.getOwnedStatements().stream()
 				.filter(statement -> statement instanceof RelationEntity)
@@ -520,22 +531,8 @@ public class VocabularyBundleToProfile {
 		if (createdAssociations.contains(key)) {
 			return;
 		}
-
-	   /*
-		if (end1Name.equals("isExplainedBy")) {
-			if (srcClass.getName().equals("Reference")) {
-				System.out.println("test");
-			}
-		}
-		if (end2Name.equals("isExplainedBy")) {
-			if (trgClass.getName().equals("Reference")) {
-				System.out.println("test2");
-			}
-		}
-		*/
-		end1Navigable &= isNAvigable(srcClass,end1Name);
+	   	end1Navigable &= isNAvigable(srcClass,end1Name);
 		end2Navigable &= isNAvigable(trgClass,end2Name);
-		
 		// if it is there it means it was handled at creation time
 		srcClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
 				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
@@ -618,9 +615,15 @@ public class VocabularyBundleToProfile {
 			case "boolean":
 				return (PrimitiveType) umlMetaModel.getMember("Boolean");
 			}
-		} else if (range instanceof EnumeratedScalar) {
-			return (DataType) converted.get(range);
-		}
+		} else if (range instanceof EnumeratedScalar || 
+				   range instanceof Structure || 
+				   range instanceof StructuredProperty ) {
+			DataType foundType =  (DataType) converted.get(range);
+			if (foundType==null) {
+				logger.error("UnMapped Type: " + range.getName());
+			}
+			return foundType;
+		} 
 		return null;
 	}
 
