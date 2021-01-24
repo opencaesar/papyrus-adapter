@@ -227,9 +227,21 @@ public class VocabularyBundleToProfile {
 			convertEntity(profile, voc, pkg, (Entity)type);
 		} else if (type instanceof EnumeratedScalar) {
 			convertEnum(pkg,  (EnumeratedScalar)type);
+		} else if (type instanceof Structure) {
+			convertStructure(profile, voc, pkg, (Structure)type);
 		}
 	}
 	
+	private void convertStructure(Profile profile, Vocabulary voc, Package pkg, Structure type) {
+		Classifier convertedType = converted.get(type);
+		if (convertedType==null) {
+			logger.debug("Converting : " + type.getName());
+			convertedType = pkg.createOwnedClass(type.getName(), false);
+			converted.put(type, convertedType);
+			convertAnnotations(convertedType, type);
+		}
+	}
+
 	private void convertEntity(Profile profile, Vocabulary voc, Package pkg, Entity entity) {
 		if (converted.containsKey(entity)) {
 			return;
@@ -446,7 +458,7 @@ public class VocabularyBundleToProfile {
 	}
 
 	private boolean canConvert(Type type) {
-		return type instanceof Entity || type instanceof EnumeratedScalar;
+		return type instanceof Entity || type instanceof EnumeratedScalar || type instanceof Structure;
 	}
 
 	private Map<ScalarProperty, List<PropertyRestrictionAxiom>> getMappedRestrictions(
