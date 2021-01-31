@@ -29,6 +29,8 @@ import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
+import io.opencaesar.oml.AnnotatedElement;
+import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Concept;
 import io.opencaesar.oml.ConceptInstance;
 import io.opencaesar.oml.ConceptTypeAssertion;
@@ -45,7 +47,11 @@ import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.RelationTypeAssertion;
 import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.ScalarPropertyValueAssertion;
+import io.opencaesar.oml.SourceRelation;
+import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.TypeAssertion;
+import io.opencaesar.oml.Vocabulary;
+import io.opencaesar.oml.util.OmlConstants;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml.util.OmlVisitor;
@@ -66,6 +72,8 @@ public class DescriptionBundleToModel {
 	private Set<RelationInstance> relations = new HashSet<>();
 	private Set<LinkAssertion> links = new HashSet<>();
 	private final boolean forceReifiedLinks;
+	private static final String UML_IRI = ("http://www.eclipse.org/uml2/5.0.0/UML");
+	private Vocabulary umlVoc;
 	
 	public DescriptionBundleToModel(DescriptionBundle rootOntology, Profile profile, File outputFolder, boolean forceReifiedLinks, ResourceSet outputResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
@@ -101,18 +109,28 @@ public class DescriptionBundleToModel {
 		if (resourceRoot != null) {
 			outputResource.getContents().add(resourceRoot);
 		}
-			
+		final Vocabulary[] umlVoc = new Vocabulary[1];
 		// Collect all descriptions
 		List<Description> allDescriptions = OmlRead.getAllImportedOntologies(rootOntology).stream().
-			filter(o -> o instanceof Description).
+			filter(o -> {
+				if (o.getIri().equals(UML_IRI)) {
+					umlVoc[0] = (Vocabulary)o;
+				}
+				return o instanceof Description;
+			}).
 			map(o -> (Description)o).
 			collect(Collectors.toList());
-		
+		this.umlVoc = umlVoc[0];
 		// Convert each description
 		allDescriptions.forEach(d -> visitor.doSwitch(d));
 		relations.forEach(r -> convertRelationInstance(r));
 		links.forEach(l -> convertLink(l));
 		return outputResource;
+	}
+	
+	private Entity getUMLEntityByName(String name) {
+		String iri = UML_IRI + "/" + name;
+		return (Entity)OmlRead.getMemberByIri(umlVoc, iri);
 	}
 	
 	protected String getOutputFileExtension() {
@@ -196,17 +214,27 @@ public class DescriptionBundleToModel {
 		PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
 		element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
 		oml2EcoreMap.put(object, element);
+		
+		Entity entity = getUMLEntityByName(eClass.getName());
+		if (entity instanceof RelationEntity) {
+			RelationEntity umlRelEntity = (RelationEntity)entity;
+			SourceRelation sourceRel = umlRelEntity.getSourceRelation();
+			String sourceName = getNamefromAnnotation(sourceRel);
+			TargetRelation targetRel = umlRelEntity.getTargetRelation();
+			String targetName = getNamefromAnnotation(targetRel);
+			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
+			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
+			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+			List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+			setFeatureValue(sourceFeature,element,sources);
+			setFeatureValue(targetFeature,element,targets);
+		}else {
+			logger.warn("Found concept not Relation");
+		}
 
 		org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) oml2EcoreMap.get(OmlRead.getOntology(object));
 		package_.getPackagedElements().add(element);
-
-		if (element instanceof DirectedRelationship) {
-			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
-			List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
-			DirectedRelationship relationship = (DirectedRelationship)element;
-			UmlUtils.setSources(relationship, sources);
-			UmlUtils.setTargets(relationship, targets);
-		}
+		
 		for (RelationEntity aRelationEntity : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
 			Stereotype aStereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(aRelationEntity));
 			if (aStereotype == null) {
@@ -221,6 +249,27 @@ public class DescriptionBundleToModel {
 			});
 	}
 	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void setFeatureValue(EStructuralFeature feature, PackageableElement element,
+			List<NamedElement> sources) {
+		if (feature.isMany()) {
+			((List)element.eGet(feature,true)).addAll(sources);
+		}else  {
+			element.eSet(feature, sources.get(0));
+		}
+	}
+
+	private String getNamefromAnnotation(AnnotatedElement element) {
+		List<Annotation> annotations = OmlSearch.findAnnotations(element);
+		for (Annotation annotation : annotations) {
+			if (OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.DC_NS+"title")) {
+				String val = OmlRead.getLexicalValue(annotation.getValue());
+				return val;
+			}
+		}
+		return "";
+	}
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void convertLink(LinkAssertion object) {
 		System.out.print(".");
@@ -252,16 +301,20 @@ public class DescriptionBundleToModel {
 			org.eclipse.uml2.uml.Package package_ = (Package) oml2EcoreMap.get(OmlRead.getOntology(object));
 			package_.getPackagedElements().add(element);
 	
-			if (element instanceof DirectedRelationship) {
-				DirectedRelationship relationship = (DirectedRelationship)element;
-				if (object.getRelation() instanceof ForwardRelation) {
-					UmlUtils.setSources(relationship, Collections.singletonList(source));
-					UmlUtils.setTargets(relationship, Collections.singletonList(target));
-				} else {
-					UmlUtils.setSources(relationship, Collections.singletonList(target));
-					UmlUtils.setTargets(relationship, Collections.singletonList(source));
-				}
-			}	
+			Entity entity = getUMLEntityByName(eClass.getName());
+			if (entity instanceof RelationEntity) {
+				RelationEntity umlRelEntity = (RelationEntity)entity;
+				SourceRelation sourceRel = umlRelEntity.getSourceRelation();
+				String sourceName = getNamefromAnnotation(sourceRel);
+				TargetRelation targetRel = umlRelEntity.getTargetRelation();
+				String targetName = getNamefromAnnotation(targetRel);
+				EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
+				EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
+				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
+				setFeatureValue(targetFeature,element,Collections.singletonList(source));
+			}else {
+				logger.warn("Found concept not Relation");
+			}
 			element.applyStereotype(stereotype);
 		}else {
 			NamedInstance sourceInst = OmlRead.getSource(object);
