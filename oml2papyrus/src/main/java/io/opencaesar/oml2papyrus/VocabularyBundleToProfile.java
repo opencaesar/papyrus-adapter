@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
@@ -35,6 +36,8 @@ import io.opencaesar.oml.AnnotatedElement;
 import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Aspect;
 import io.opencaesar.oml.CardinalityRestrictionKind;
+import io.opencaesar.oml.Concept;
+import io.opencaesar.oml.ConceptReference;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
 import io.opencaesar.oml.FacetedScalar;
@@ -44,6 +47,7 @@ import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.PropertyRestrictionAxiom;
 import io.opencaesar.oml.QuotedLiteral;
 import io.opencaesar.oml.RangeRestrictionKind;
+import io.opencaesar.oml.Reference;
 import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationCardinalityRestrictionAxiom;
 import io.opencaesar.oml.RelationEntity;
@@ -56,6 +60,7 @@ import io.opencaesar.oml.ScalarPropertyCardinalityRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRangeRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRestrictionAxiom;
 import io.opencaesar.oml.SpecializableTerm;
+import io.opencaesar.oml.SpecializationAxiom;
 import io.opencaesar.oml.Structure;
 import io.opencaesar.oml.StructuredProperty;
 import io.opencaesar.oml.Type;
@@ -70,6 +75,7 @@ import io.opencaesar.oml2papyrus.util.UmlUtils;
 public class VocabularyBundleToProfile {
 
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
+	private static final String IS_CLASS = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isClass";
 
 	private VocabularyBundle rootOntology;
 	private File outputFolder;
@@ -81,6 +87,8 @@ public class VocabularyBundleToProfile {
 	private Map<RelationEntity, AssociationInfo> relationToAssociationInfo = new HashMap<>();
 	private Set<AssociationKey> createdAssociations = new HashSet<>();
 	private Map<Classifier,Set<String>> classifierEndName = new HashMap<>();
+	private Set<Entity> classes = new HashSet<>();
+	private Set<Entity> stereoTypes = new HashSet<>();
 
 	private static Set<String> vocsToSkip = new HashSet<>();
 	static {
@@ -135,6 +143,15 @@ public class VocabularyBundleToProfile {
 	}
 	
 	
+	private boolean checkClassesVsStereoTypes() {
+		for(Entity cls : classes) {
+			if (stereoTypes.contains(cls)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private boolean isFiltered(Vocabulary voc) {
 		if (vocsToSkip.contains(voc.getIri())) {
 			logger.debug("Skipping");
@@ -162,16 +179,18 @@ public class VocabularyBundleToProfile {
 			convertVocabulary(profile, voc);
 			logger.debug("================================================");
 		}
-
+		
+		if (!checkClassesVsStereoTypes()) {
+			logger.error("Classes - StereoType colisions");
+			System.exit(-1);
+		}
+		
 		// Properties
 		convertAllProperties(profile,allVoc);
-		
 		// Relationships
 		updateRelationships(allVoc);
-
 		// update the generalizations
 		updateAllGeneralizations();
-		
 		// now we need to deal with restrictions (Range and Value)
 		updateRestrictions(allVoc);
 	}
@@ -198,14 +217,49 @@ public class VocabularyBundleToProfile {
 	private void convertAnnotations(Element umlElement, AnnotatedElement omlElement) {
 		List<Annotation> annotations = OmlSearch.findAnnotations(omlElement);
 		for (Annotation annotation : annotations) {
+			String iri = OmlRead.getIri(annotation.getProperty());
 			if (OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.DC_NS+"description") ||
 				OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.RDFS_NS+"comment")) {
 				Comment comment = umlElement.createOwnedComment();
 				comment.setBody(OmlRead.getLexicalValue(annotation.getValue()));
+			}else if (iri.equals(IS_CLASS)) {
+				ConceptReference ref = (ConceptReference) annotation.getOwningReference();
+				Concept concept = ref.getConcept();
+				addClass(concept);
+				System.out.println(classes.size());
+			}else if (iri.equals(IS_STEREOTYPE_OF)){
+				Reference ref = (Reference) annotation.getOwningReference();
+				if (ref instanceof ConceptReference) {
+					Concept concept = ((ConceptReference)ref).getConcept();
+					stereoTypes.add(concept);
+				}
 			}
 		}
 	}
 	
+	private void addClass(Concept concept) {
+		if (!classes.contains(concept)) {
+			classes.add(concept);
+			List<SpecializableTerm> general = OmlSearch.findAllGeneralTerms(concept);
+			for (SpecializableTerm gen : general) {
+				if (gen instanceof Concept) {
+					if (!classes.contains(gen)) {
+						classes.add((Concept)gen);
+						List<SpecializationAxiom> axioms = OmlSearch.findSpecializationAxiomsWithGeneralTerm((Concept)gen);
+						for (SpecializationAxiom axiom : axioms) {
+							EObject container = axiom.eContainer();
+							if (container instanceof Concept) {
+								addClass((Concept)axiom.eContainer());
+							}else if (container instanceof ConceptReference) {
+								addClass(((ConceptReference)container).getConcept());
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	private void convertVocabulary(Profile profile, Vocabulary voc) {
 		// get all voc types
 		List<Type> types = voc.getOwnedStatements().stream()
