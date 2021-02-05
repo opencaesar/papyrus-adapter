@@ -24,29 +24,23 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.google.common.io.CharStreams;
 
+import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
 import io.opencaesar.oml.util.OmlCatalog;
+import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlXMIResourceFactory;
 
 public class Papyrus2OmlApp {
 
 	static final List<String> INPUT_EXTENSIONS = Arrays.asList(new String[] {"uml"});
 
 	@Parameter(
-		names= {"--input-folder-path","-i"}, 
-		description="Path to the input folder (Required)",
-		validateWith=InputFolderPath.class, 
-		required=true, 
-		order=1
-	)
-	private String inputFolderPath = null;
-
-	@Parameter(
-			names= {"--input-model-path","-m"}, 
-			description="Path to the root UML2 model file (Required)",
+			names= {"--input-model-path","-i"}, 
+			description="Path to the input Papyrus UML2 model file (Required)",
 			validateWith=InputFilePath.class, 
 			required=true, 
-			order=2
+			order=1
 	)
 	private String inputModelPath = null;
 
@@ -59,6 +53,14 @@ public class Papyrus2OmlApp {
 	)
 	private String outputCatalogPath;
 		
+	@Parameter(
+			names= {"--ignored-iri-prefix","-p"}, 
+			description="Prefixes of IRIs to ignore converting (Optional)",
+			required=false, 
+			order=2
+	)
+	private List<String> ignoredIriPrefixes = null;
+
 	@Parameter(
 		names= {"--debug", "-d"}, 
 		description="Shows debug logging statements", 
@@ -90,9 +92,6 @@ public class Papyrus2OmlApp {
 			final Appender appender = LogManager.getRootLogger().getAppender("stdout");
 			((AppenderSkeleton)appender).setThreshold(Level.DEBUG);
 		}
-		if (app.inputFolderPath.endsWith(File.separator)) {
-			app.inputFolderPath = app.inputFolderPath.substring(0, app.inputFolderPath.length()-1);
-		}
 		app.run();
 	}
 
@@ -104,11 +103,15 @@ public class Papyrus2OmlApp {
 		LOGGER.info("                        S T A R T");
 		LOGGER.info("                      Papyrus to Oml "+getAppVersion());
 		LOGGER.info("=================================================================");
-		LOGGER.info("Input Folder Path= " + inputFolderPath);
+		LOGGER.info("Input Model Path= " + inputModelPath);
 		LOGGER.info("Output Catalog Path= " + outputCatalogPath);
 		
+		// create the input model file
+		final File inputModelFile = new File(inputModelPath);
+
 		// load the Oml language
 		OmlStandaloneSetup.doSetup();
+		OmlXMIResourceFactory.register();
 		
 		// load the Oml catalog
 		final URL catalogURL = new File(outputCatalogPath).toURI().toURL();
@@ -121,22 +124,21 @@ public class Papyrus2OmlApp {
 		// create the Oml writer
 		final OmlWriter writer = new OmlWriter(omlResourceSet);
 		writer.start();
-		
-		// create the input folder and files
-		final File inputFolder = new File(inputFolderPath);
-		final File inputModelFile = new File(inputModelPath);
-		
+				
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputFolder, inputModelFile, omlResourceSet, catalog, writer, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, catalog, writer, LOGGER);
 		omlResources.addAll(converter.convert());
 
 		// finish the Oml writer
 		writer.finish();
 		
 		// save the Oml resources
-		for (Resource outputResource : omlResources) {
-			LOGGER.info("Saving: "+outputResource.getURI());
-			outputResource.save(Collections.EMPTY_MAP);
+		for (Resource resource : omlResources) {
+			LOGGER.info("Saving: "+resource.getURI());
+			Ontology ontology = OmlRead.getOntology(resource);
+			if (!shouldIgnoreIri(ontology.getIri())) {
+				resource.save(Collections.EMPTY_MAP);
+			}
 		}
 
 		LOGGER.info("=================================================================");
@@ -145,6 +147,15 @@ public class Papyrus2OmlApp {
 	}
 
 	// Utility methods
+	
+	protected boolean shouldIgnoreIri(String iri) {
+		for (String prefix : ignoredIriPrefixes) {
+			if (iri.startsWith(prefix)) {
+				return true;
+			}
+		}
+		return false;
+	}
 	
 	/**
 	 * Get application version id from properties file.
@@ -177,7 +188,9 @@ public class Papyrus2OmlApp {
 		@Override
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
-			if (!file.exists()) {
+			final String fName = file.getName();
+			final String fExt = fName.substring(fName.lastIndexOf(".") + 1);
+			if (!file.exists() || !fExt.equals("uml")) {
 				throw new ParameterException("Argument " + value + " should be a valid Papyrus UML2 file path");
 			}
 	  	}
