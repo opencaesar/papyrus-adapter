@@ -37,7 +37,7 @@ public class Oml2PapyrusApp {
 
 	@Parameter(
 			names= {"--input-ontology-path", "-i"}, 
-			description="IRI of the input OML ontology (Required)", 
+			description="Path to the input OML ontology (Required)", 
 			required=true, 
 			order=2
 	)
@@ -45,7 +45,7 @@ public class Oml2PapyrusApp {
 
 	@Parameter(
 			names= {"--input-profile-path", "-p"}, 
-			description="Path of the input UML profile (Optional)", 
+			description="Path to the input UML profile (Optional)", 
 			validateWith=InputProfilePath.class, 
 			required=false, 
 			order=2
@@ -54,7 +54,7 @@ public class Oml2PapyrusApp {
 
 	@Parameter(
 		names= {"--output-folder-path","-o"}, 
-		description="Path to the output papyrus folder (Required)",
+		description="Path to the output Papyrus folder (Required)",
 		validateWith=OutputFolderPath.class, 
 		required=true, 
 		order=3
