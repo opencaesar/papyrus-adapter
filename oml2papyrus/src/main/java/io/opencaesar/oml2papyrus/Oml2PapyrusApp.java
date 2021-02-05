@@ -75,6 +75,13 @@ public class Oml2PapyrusApp {
 		order=5
 	) 
 	private boolean help;
+	
+	@Parameter(
+		names= {"--forceReifiedLinks","-f"}, 
+		description="Force link to be conveted to reified realtions", 
+		order=6
+	) 
+	private boolean forceReifiedLinks;
 
     private final static Logger LOGGER = Logger.getLogger(Oml2PapyrusApp.class);
 
@@ -147,7 +154,7 @@ public class Oml2PapyrusApp {
 			URI profileUri = URI.createFileURI(inputProfilePath);
 			Resource profileResource = papyrusResourceSet.getResource(profileUri, true);
 			Profile profile = (Profile) profileResource.getContents().get(0);
-			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, profile, outputFolder, papyrusResourceSet, LOGGER).convert();
+			papyrusResource = new DescriptionBundleToModel((DescriptionBundle)rootOntology, profile, outputFolder,forceReifiedLinks, papyrusResourceSet, LOGGER).convert();
 		}
 				
 		// save the Papyrus resources

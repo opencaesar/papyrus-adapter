@@ -3,8 +3,10 @@ package io.opencaesar.oml2papyrus;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
@@ -18,6 +20,7 @@ import org.eclipse.uml2.uml.DirectedRelationship;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.NamedElement;
+import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.Stereotype;
@@ -26,11 +29,14 @@ import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 import org.eclipse.uml2.uml.resource.UMLResource;
 
+import io.opencaesar.oml.AnnotatedElement;
+import io.opencaesar.oml.Annotation;
 import io.opencaesar.oml.Concept;
 import io.opencaesar.oml.ConceptInstance;
 import io.opencaesar.oml.ConceptTypeAssertion;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
+import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Instance;
@@ -41,6 +47,11 @@ import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.RelationTypeAssertion;
 import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.ScalarPropertyValueAssertion;
+import io.opencaesar.oml.SourceRelation;
+import io.opencaesar.oml.TargetRelation;
+import io.opencaesar.oml.TypeAssertion;
+import io.opencaesar.oml.Vocabulary;
+import io.opencaesar.oml.util.OmlConstants;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlSearch;
 import io.opencaesar.oml.util.OmlVisitor;
@@ -57,11 +68,18 @@ public class DescriptionBundleToModel {
 	
 	private EObject resourceRoot;
 	private Map<String, Type> iriToTypeMap;
+	private final Map<io.opencaesar.oml.Element, EObject> oml2EcoreMap = new HashMap<>();
+	private Set<RelationInstance> relations = new HashSet<>();
+	private Set<LinkAssertion> links = new HashSet<>();
+	private final boolean forceReifiedLinks;
+	private static final String UML_IRI = ("http://www.eclipse.org/uml2/5.0.0/UML");
+	private Vocabulary umlVoc;
 	
-	public DescriptionBundleToModel(DescriptionBundle rootOntology, Profile profile, File outputFolder, ResourceSet outputResourceSet, Logger logger) {
+	public DescriptionBundleToModel(DescriptionBundle rootOntology, Profile profile, File outputFolder, boolean forceReifiedLinks, ResourceSet outputResourceSet, Logger logger) {
 		this.rootOntology = rootOntology;
 		this.profile = profile;
 		this.outputFolder = outputFolder;
+		this.forceReifiedLinks = forceReifiedLinks;
 		this.outputResourceSet = outputResourceSet;
 		this.logger = logger;
 		this.visitor = createDescriptionBundleVisitor(rootOntology);
@@ -70,7 +88,6 @@ public class DescriptionBundleToModel {
 	}
 
 	public Resource convert() throws Exception {
-		
 		// Create parent folder
 		URI iri = URI.createURI(rootOntology.getIri());
 		String authority = iri.authority();
@@ -92,17 +109,28 @@ public class DescriptionBundleToModel {
 		if (resourceRoot != null) {
 			outputResource.getContents().add(resourceRoot);
 		}
-			
+		final Vocabulary[] umlVoc = new Vocabulary[1];
 		// Collect all descriptions
 		List<Description> allDescriptions = OmlRead.getAllImportedOntologies(rootOntology).stream().
-			filter(o -> o instanceof Description).
+			filter(o -> {
+				if (o.getIri().equals(UML_IRI)) {
+					umlVoc[0] = (Vocabulary)o;
+				}
+				return o instanceof Description;
+			}).
 			map(o -> (Description)o).
 			collect(Collectors.toList());
-		
+		this.umlVoc = umlVoc[0];
 		// Convert each description
 		allDescriptions.forEach(d -> visitor.doSwitch(d));
-		
+		relations.forEach(r -> convertRelationInstance(r));
+		links.forEach(l -> convertLink(l));
 		return outputResource;
+	}
+	
+	private Entity getUMLEntityByName(String name) {
+		String iri = UML_IRI + "/" + name;
+		return (Entity)OmlRead.getMemberByIri(umlVoc, iri);
 	}
 	
 	protected String getOutputFileExtension() {
@@ -127,15 +155,202 @@ public class DescriptionBundleToModel {
 		}
 		package_.getNestedPackages().forEach(p -> populateIriToTypeMap(p, map));
 	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public EObject convertScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {
+		Object value = OmlSearch.findJavaValue(object.getValue());
+		if (object.getProperty().getRange() instanceof EnumeratedScalar) {
+			value = UmlUtils.getUMLFirendlyName(value.toString()); 
+		}
+		ScalarProperty property = object.getProperty();
+		Instance instance = OmlRead.getInstance(object);
+		if (instance instanceof NamedInstance) {
+			Element element = (Element) oml2EcoreMap.get(instance);
+			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(object.getProperty().getDomain()));
+			List<Stereotype> stereotypes = element.getAppliedSubstereotypes(stereotype);
+			for (Stereotype s : stereotypes) {
+				// check for many
+				Object val = element.getValue(s,UmlUtils.getUMLFirendlyName(property.getName()));
+				if (val instanceof List) {
+					//ugly
+					((List)val).add(value);
+				} else {
+					element.setValue(s, property.getName(), value);
+				}
+			}
+		} else {
+			EObject element = oml2EcoreMap.get(instance);
+			EStructuralFeature feature = element.eClass().getEStructuralFeature(property.getName());
+			if (feature.isMany()) {
+				((List)element.eGet(feature,true)).add(value);
+			}else  {
+				element.eSet(feature, value);
+			}
+		}
+		return null;
+	}
+	
+	public void convertRelationInstance(RelationInstance object) {
+		List<RelationTypeAssertion> assertions = OmlSearch.findTypeAssertions(object);
+		if (assertions.isEmpty()) {
+			throw new IllegalArgumentException("relation instance "+OmlRead.getIri(object)+" does not have a type");
+		}
+		RelationEntity relationEntity = assertions.get(0).getType();
+
+		Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
+		if (stereotype == null) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" is not found in the profile");
+		}
+
+		List<org.eclipse.uml2.uml.Class> metaclasses = stereotype.getAllExtendedMetaclasses();
+		if (metaclasses.isEmpty()) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
+		}
+		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
+		if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
+		}
+		
+		PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
+		element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
+		oml2EcoreMap.put(object, element);
+		
+		Entity entity = getUMLEntityByName(eClass.getName());
+		if (entity instanceof RelationEntity) {
+			RelationEntity umlRelEntity = (RelationEntity)entity;
+			SourceRelation sourceRel = umlRelEntity.getSourceRelation();
+			String sourceName = getNamefromAnnotation(sourceRel);
+			TargetRelation targetRel = umlRelEntity.getTargetRelation();
+			String targetName = getNamefromAnnotation(targetRel);
+			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
+			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
+			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+			List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+			setFeatureValue(sourceFeature,element,sources);
+			setFeatureValue(targetFeature,element,targets);
+		}else {
+			logger.warn("Found concept not Relation");
+		}
+
+		org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) oml2EcoreMap.get(OmlRead.getOntology(object));
+		package_.getPackagedElements().add(element);
+		
+		for (RelationEntity aRelationEntity : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
+			Stereotype aStereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(aRelationEntity));
+			if (aStereotype == null) {
+				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(aRelationEntity)+" is not found in the profile");
+			}
+			element.applyStereotype(aStereotype);
+		}
+		OmlSearch.findPropertyValueAssertions(object).forEach(e ->{ 
+				if (e instanceof ScalarPropertyValueAssertion) {
+					convertScalarPropertyValueAssertion((ScalarPropertyValueAssertion)e);
+				}
+			});
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void setFeatureValue(EStructuralFeature feature, PackageableElement element,
+			List<NamedElement> sources) {
+		if (feature.isMany()) {
+			((List)element.eGet(feature,true)).addAll(sources);
+		}else  {
+			element.eSet(feature, sources.get(0));
+		}
+	}
+
+	private String getNamefromAnnotation(AnnotatedElement element) {
+		List<Annotation> annotations = OmlSearch.findAnnotations(element);
+		for (Annotation annotation : annotations) {
+			if (OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.DC_NS+"title")) {
+				String val = OmlRead.getLexicalValue(annotation.getValue());
+				return val;
+			}
+		}
+		return "";
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private void convertLink(LinkAssertion object) {
+		System.out.print(".");
+		RelationEntity relationEntity = OmlRead.getRelationEntity(object.getRelation());
+		Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
+		if (stereotype == null) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" is not found in the profile");
+		}
+
+		List<org.eclipse.uml2.uml.Class> metaclasses = stereotype.getAllExtendedMetaclasses();
+		if (metaclasses.isEmpty()) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
+		}
+		
+		// reified flow should be triggered if the reified flag is ON
+		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
+		if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
+			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
+		}
+		
+		NamedElement source = (NamedElement) oml2EcoreMap.get(OmlRead.getSource(object));
+		NamedElement target = (NamedElement) oml2EcoreMap.get(object.getTarget());
+		
+		if (forceReifiedLinks) {
+			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
+			element.setName(null);
+			oml2EcoreMap.put(object, element);
+
+			org.eclipse.uml2.uml.Package package_ = (Package) oml2EcoreMap.get(OmlRead.getOntology(object));
+			package_.getPackagedElements().add(element);
+	
+			Entity entity = getUMLEntityByName(eClass.getName());
+			if (entity instanceof RelationEntity) {
+				RelationEntity umlRelEntity = (RelationEntity)entity;
+				SourceRelation sourceRel = umlRelEntity.getSourceRelation();
+				String sourceName = getNamefromAnnotation(sourceRel);
+				TargetRelation targetRel = umlRelEntity.getTargetRelation();
+				String targetName = getNamefromAnnotation(targetRel);
+				EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
+				EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
+				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
+				setFeatureValue(targetFeature,element,Collections.singletonList(source));
+			}else {
+				logger.warn("Found concept not Relation");
+			}
+			element.applyStereotype(stereotype);
+		}else {
+			NamedInstance sourceInst = OmlRead.getSource(object);
+			NamedInstance targetInst = object.getTarget();
+			EObject sourceApplication = getStereoTypeApplication(sourceInst, source);
+			EObject targetApplication = getStereoTypeApplication(targetInst, target);
+			if (targetApplication==null) {
+				logger.error("could not find stereotype application for link " + target);
+			}
+			String relName = object.getRelation().getName();
+			EStructuralFeature feature = sourceApplication.eClass().getEStructuralFeature(relName);
+			if (feature.isMany()) {
+				((List)sourceApplication.eGet(feature,true)).add(targetApplication);
+			}else  {
+				sourceApplication.eSet(feature, targetApplication);
+			}
+
+		}
+	}
+	
+	private EObject getStereoTypeApplication(NamedInstance instance, NamedElement element ) {
+		List<TypeAssertion> assertions = OmlSearch.findTypeAssertions(instance);
+		Entity type = OmlRead.getType(assertions.get(0));
+		Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(type));
+		return  element.getStereotypeApplication(stereotype);
+	}
 
 	public class DescriptionBundleVisitor extends OmlVisitor<EObject> {
 
-		private final Map<io.opencaesar.oml.Element, EObject> oml2EcoreMap = new HashMap<>();
-		
 		@Override
 		protected EObject doSwitch(int classifierID, EObject theEObject) {
 			EObject result = oml2EcoreMap.get(theEObject);
 			if (result == null) {
+				if (links.contains(theEObject) || relations.contains(theEObject)) {
+					return theEObject;
+				}
 				result = super.doSwitch(classifierID, theEObject);
 			}
 			return result;
@@ -191,98 +406,16 @@ public class DescriptionBundleToModel {
 
 		@Override
 		public EObject caseRelationInstance(RelationInstance object) {
-			List<RelationTypeAssertion> assertions = OmlSearch.findTypeAssertions(object);
-			if (assertions.isEmpty()) {
-				throw new IllegalArgumentException("relation instance "+OmlRead.getIri(object)+" does not have a type");
-			}
-			RelationEntity relationEntity = assertions.get(0).getType();
-
-			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
-			if (stereotype == null) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" is not found in the profile");
-			}
-
-			List<org.eclipse.uml2.uml.Class> metaclasses = stereotype.getAllExtendedMetaclasses();
-			if (metaclasses.isEmpty()) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
-			}
-			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
-			if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
-			}
-			
-			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
-			element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
-			oml2EcoreMap.put(object, element);
-
-			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			package_.getPackagedElements().add(element);
-	
-			if (element instanceof DirectedRelationship) {
-				List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
-				List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) doSwitch(s)).collect(Collectors.toList());
-				DirectedRelationship relationship = (DirectedRelationship)element;
-				UmlUtils.setSources(relationship, sources);
-				UmlUtils.setTargets(relationship, targets);
-			}
-			
-			for (RelationEntity aRelationEntity : assertions.stream().map(a -> a.getType()).collect(Collectors.toSet())) {
-				Stereotype aStereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(aRelationEntity));
-				if (aStereotype == null) {
-					throw new IllegalArgumentException("stereotype "+OmlRead.getIri(aRelationEntity)+" is not found in the profile");
-				}
-				element.applyStereotype(aStereotype);
-			}
-			
-			OmlSearch.findLinkAssertionsWithSource(object).forEach(e -> doSwitch(e));
-			OmlSearch.findPropertyValueAssertions(object).forEach(e -> doSwitch(e));
-
-			return element;
+			relations.add(object);			
+			OmlSearch.findLinkAssertionsWithSource(object).forEach(e -> links.add(e));
+			return object;
 		}
 		
-		@Override
 		public EObject caseLinkAssertion(LinkAssertion object) {
-			RelationEntity relationEntity = OmlRead.getRelationEntity(object.getRelation());
-
-			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
-			if (stereotype == null) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" is not found in the profile");
-			}
-
-			List<org.eclipse.uml2.uml.Class> metaclasses = stereotype.getAllExtendedMetaclasses();
-			if (metaclasses.isEmpty()) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
-			}
-			EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
-			if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
-				throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
-			}
-			
-			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
-			element.setName(null);
-			oml2EcoreMap.put(object, element);
-
-			org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) doSwitch(OmlRead.getOntology(object));
-			package_.getPackagedElements().add(element);
-	
-			if (element instanceof DirectedRelationship) {
-				NamedElement source = (NamedElement) doSwitch(OmlRead.getSource(object));
-				NamedElement target = (NamedElement) doSwitch(object.getTarget());
-				DirectedRelationship relationship = (DirectedRelationship)element;
-				if (object.getRelation() instanceof ForwardRelation) {
-					UmlUtils.setSources(relationship, Collections.singletonList(source));
-					UmlUtils.setTargets(relationship, Collections.singletonList(target));
-				} else {
-					UmlUtils.setSources(relationship, Collections.singletonList(target));
-					UmlUtils.setTargets(relationship, Collections.singletonList(source));
-				}
-			}
-			
-			element.applyStereotype(stereotype);
-			
-			return element;
+			links.add(object);
+			return object;
 		}
-
+		
 		@SuppressWarnings({ "unchecked", "rawtypes" })
 		@Override
 		public EObject caseScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {

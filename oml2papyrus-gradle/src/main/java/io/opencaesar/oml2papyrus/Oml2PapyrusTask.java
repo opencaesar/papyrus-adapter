@@ -15,6 +15,8 @@ public class Oml2PapyrusTask extends DefaultTask {
 
 	public String outputFolderPath = null;
 	
+	public boolean forceReifiedLinks = false;
+	
 	public boolean debug;
 
     @TaskAction
@@ -34,6 +36,9 @@ public class Oml2PapyrusTask extends DefaultTask {
         }
 	    if (debug) {
 		    args.add("-d");
+	    }
+	    if (forceReifiedLinks) {
+	    	args.add("-f");
 	    }
 	    try {
 	    	Oml2PapyrusApp.main(args.toArray(new String[0]));
