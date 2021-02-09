@@ -16,7 +16,6 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.uml2.uml.DirectedRelationship;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.NamedElement;
@@ -38,7 +37,6 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
-import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Instance;
 import io.opencaesar.oml.LinkAssertion;
 import io.opencaesar.oml.NamedInstance;
@@ -371,6 +369,11 @@ public class DescriptionBundleToModel {
 				throw new IllegalArgumentException("concept instance "+OmlRead.getIri(object)+" does not have a type");
 			}
 			Concept concept = assertions.get(0).getType();
+			Type type = iriToTypeMap.get(OmlRead.getIri(concept));
+			if (!(type instanceof Stereotype)) {
+				// is class case skip the CI
+				return null;
+			}
 			
 			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(concept));
 			if (stereotype == null) {

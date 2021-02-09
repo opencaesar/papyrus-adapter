@@ -84,6 +84,7 @@ public class VocabularyBundleToProfile {
 
 	private Model umlMetaModel;
 	private Map<io.opencaesar.oml.Type, Classifier> converted = new HashMap<>();
+	private Map<Classifier,io.opencaesar.oml.Type> convertedToEntity = new HashMap<>();
 	private Map<RelationEntity, AssociationInfo> relationToAssociationInfo = new HashMap<>();
 	private Set<AssociationKey> createdAssociations = new HashSet<>();
 	private Map<Classifier,Set<String>> classifierEndName = new HashMap<>();
@@ -108,6 +109,7 @@ public class VocabularyBundleToProfile {
 	public Resource convert() throws Exception {
 		// Clear all caches
 		converted.clear();
+		convertedToEntity.clear();
 
 		// Get the UML metamodel
 		umlMetaModel = ProfileUtils.getUMLMetamodel(outputResourceSet);
@@ -291,9 +293,14 @@ public class VocabularyBundleToProfile {
 		if (convertedType==null) {
 			logger.debug("Converting : " + type.getName());
 			convertedType = pkg.createOwnedClass(type.getName(), false);
-			converted.put(type, convertedType);
+			addConverted(type, convertedType);
 			convertAnnotations(convertedType, type);
 		}
+	}
+
+	private void addConverted(Type type, Classifier convertedType) {
+		converted.put(type, convertedType);
+		convertedToEntity.put(convertedType, type);
 	}
 
 	private void convertEntity(Profile profile, Vocabulary voc, Package pkg, Entity entity) {
@@ -305,7 +312,7 @@ public class VocabularyBundleToProfile {
 		StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
 
 		Stereotype stereotype = ProfileUtils.createStereotype(pkg, UmlUtils.getUMLFirendlyName(entity.getName()), entity instanceof Aspect, infoHolder.metaClasses);
-		converted.put(entity, stereotype);
+		addConverted(entity, stereotype);
 		logger.debug("Stereotype " + stereotype.getName() + " was created");
 		
 		convertAnnotations(stereotype, entity);
@@ -338,14 +345,11 @@ public class VocabularyBundleToProfile {
 		EList<Literal> literals = enumType.getLiterals();
 		logger.debug("Enum : " + name);
 		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
-
 		convertAnnotations(umlEnum, enumType);
-
 		literals.forEach(literal -> {
 			umlEnum.createOwnedLiteral(UmlUtils.getUMLFirendlyName(OmlRead.getLexicalValue(literal)));
 		});
-
-		converted.put(enumType, umlEnum);
+		addConverted(enumType, umlEnum);
 	}
 
 	private void convertProperty(Package pkg, ScalarProperty prop, io.opencaesar.oml.Classifier entity, Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions) {
@@ -377,9 +381,7 @@ public class VocabularyBundleToProfile {
 		DataType rangeClass = getTypeForRange(range);
 		if (classifier instanceof Class) {
 			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
-			
 			convertAnnotations(umlProperty, prop);
-			
 			umlProperty.setLower(lower);
 			umlProperty.setUpper(upper);
 		}
@@ -465,9 +467,7 @@ public class VocabularyBundleToProfile {
 				for (SpecializableTerm generalTerm : generalTerms) {
 					if (generalTerm instanceof Type) {
 						Classifier generalClassifier = converted.get(generalTerm);
-						
 						Generalization gen = subClassifier.createGeneralization(generalClassifier);
-						
 						convertAnnotations(gen, generalTerm);
 					}
 				}
@@ -600,8 +600,11 @@ public class VocabularyBundleToProfile {
 	   	end1Navigable &= isNAvigable(srcClass,end1Name);
 		end2Navigable &= isNAvigable(trgClass,end2Name);
 		// if it is there it means it was handled at creation time
+		boolean isClass = classes.contains(convertedToEntity.get(trgClass));
+		// if target is class make it a composition association
+		AggregationKind aggKind = isClass ? AggregationKind.COMPOSITE_LITERAL : AggregationKind.NONE_LITERAL;
 		srcClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
-				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
+					trgClass, end2Navigable, aggKind, end2Name, end2Lower, end2Upper);
 		createdAssociations.add(key);
 		// reverse Key
 		createdAssociations.add(new AssociationKey(trgClass,end2Name,srcClass,end1Name));
