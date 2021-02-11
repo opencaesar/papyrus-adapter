@@ -1,6 +1,7 @@
 package io.opencaesar.oml2papyrus;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,12 +17,15 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.uml2.uml.AggregationKind;
+import org.eclipse.uml2.uml.Association;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.uml2.uml.Profile;
+import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.Type;
 import org.eclipse.uml2.uml.UMLFactory;
@@ -212,7 +216,9 @@ public class DescriptionBundleToModel {
 		PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
 		element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
 		oml2EcoreMap.put(object, element);
-		
+		List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+		List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
+
 		Entity entity = getUMLEntityByName(eClass.getName());
 		if (entity instanceof RelationEntity) {
 			RelationEntity umlRelEntity = (RelationEntity)entity;
@@ -222,12 +228,10 @@ public class DescriptionBundleToModel {
 			String targetName = getNamefromAnnotation(targetRel);
 			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
 			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
-			List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
-			List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
 			setFeatureValue(sourceFeature,element,sources);
 			setFeatureValue(targetFeature,element,targets);
-		}else {
-			logger.warn("Found concept not Relation");
+		}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
+			createAssociation(sources, targets);
 		}
 
 		org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) oml2EcoreMap.get(OmlRead.getOntology(object));
@@ -245,6 +249,28 @@ public class DescriptionBundleToModel {
 					convertScalarPropertyValueAssertion((ScalarPropertyValueAssertion)e);
 				}
 			});
+	}
+
+	private void createAssociation(List<NamedElement> sources, List<NamedElement> targets) {
+		Association association = UMLFactory.eINSTANCE.createAssociation();
+		List<Property> props = new ArrayList<>();
+		for (NamedElement sourceType : sources) {
+			Property prop = UMLFactory.eINSTANCE.createProperty();
+			prop.setAggregation(AggregationKind.NONE_LITERAL);
+			prop.setType((Type)sourceType);
+			prop.setIsNavigable(false);
+			association.getOwnedEnds().add(prop);
+			props.add(prop);
+		}
+		for (NamedElement targetType : targets) {
+			Property prop = UMLFactory.eINSTANCE.createProperty();
+			prop.setAggregation(AggregationKind.NONE_LITERAL);
+			prop.setType((Type)targetType);
+			prop.setIsNavigable(targets.size()==1);
+			association.getNavigableOwnedEnds().add(prop);
+			props.add(prop);
+		}
+		association.getMemberEnds().addAll(props);
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -309,9 +335,9 @@ public class DescriptionBundleToModel {
 				EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
 				EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
 				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
-				setFeatureValue(targetFeature,element,Collections.singletonList(source));
-			}else {
-				logger.warn("Found concept not Relation");
+				setFeatureValue(targetFeature,element,Collections.singletonList(target));
+			}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
+				createAssociation(Collections.singletonList(source), Collections.singletonList(target));
 			}
 			element.applyStereotype(stereotype);
 		}else {
