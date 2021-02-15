@@ -14,7 +14,7 @@ public class ProfileConverter extends ResourceConverter {
 	protected Profile profile;
 	
 	public ProfileConverter(Profile profile, OmlCatalog catalog, OmlWriter writer, Logger logger) {
-		super(catalog, writer, logger);
+		super(new ConversionContext(catalog, writer, logger));
 		this.profile = profile;
 	}
 	
