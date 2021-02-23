@@ -21,16 +21,13 @@ import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 
 public class RelationConverter implements Runnable {
-
-	private RelationEntity entity;
 	private PackageableElement element;
 	private ConversionContext context;
 	private Description description;
 	List<Member> types;
 
-	public RelationConverter(Description description, PackageableElement element, RelationEntity type,
+	public RelationConverter(Description description, PackageableElement element,
 			ConversionContext context, List<Member> types) {
-		this.entity = type;
 		this.element = element;
 		this.context = context;
 		this.description = description;
@@ -39,29 +36,10 @@ public class RelationConverter implements Runnable {
 
 	@Override
 	public void run() {
-		SourceRelation sourceR = entity.getSourceRelation();
-		// TODO: the source and target here should be accessed using the oml UML rep for dependency or whatever relation it is 
 		RelationEntity umlOmlElement = (RelationEntity)context.getUmlOmlElementByName(element.eClass().getName());
-		sourceR = umlOmlElement.getSourceRelation();
-		
-		/*while (sourceR == null && !entity.getOwnedSpecializations().isEmpty()) {
-			RelationEntity superEntity = entity.getOwnedSpecializations().stream().map(s -> s.getSpecializedTerm())
-					.filter(t -> t instanceof RelationEntity).map(t -> (RelationEntity) t).findFirst().orElse(null);
-			if (superEntity == null) {
-				break;
-			}
-			sourceR = entity.getSourceRelation();
-		}*/
+		SourceRelation sourceR = umlOmlElement.getSourceRelation();
 		List<String> sources = extractValues(element, context, description, sourceR);
 		TargetRelation targetR = umlOmlElement.getTargetRelation();
-		/*while (targetR == null && !entity.getOwnedSpecializations().isEmpty()) {
-			RelationEntity superEntity = entity.getOwnedSpecializations().stream().map(s -> s.getSpecializedTerm())
-					.filter(t -> t instanceof RelationEntity).map(t -> (RelationEntity) t).findFirst().orElse(null);
-			if (superEntity == null) {
-				break;
-			}
-			targetR = entity.getTargetRelation();
-		}*/
 		List<String> targets = extractValues(element, context, description, targetR);
 		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
 				targets);

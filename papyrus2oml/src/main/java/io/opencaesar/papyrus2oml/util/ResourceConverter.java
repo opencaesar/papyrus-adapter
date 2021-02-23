@@ -8,12 +8,17 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EEnumLiteral;
 import org.eclipse.emf.ecore.EObject;
+import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
+import org.eclipse.uml2.uml.Property;
 
+import io.opencaesar.oml.Description;
+import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.util.OmlCatalog;
@@ -57,7 +62,26 @@ public abstract class ResourceConverter {
 			return OmlRead.getMemberByName(umlVoc, name);
 		}
 		
+		public boolean shouldFilterFeature(EStructuralFeature feature) {
+			return feature.getName().startsWith("base_");
+		}
 		
+		public boolean shouldFilterFeature(Property prop) {
+			return prop.getName().startsWith("base_");
+		}
+		
+		public Literal getLiteralValue(Description description, Object val) {
+			if (val instanceof Integer) {
+				return writer.createIntegerLiteral(description, (int)val);
+			} else if (val instanceof Double) {
+				return writer.createDoubleLiteral(description, (double)val);
+			} else if (val instanceof Boolean) {
+				return writer.createBooleanLiteral(description, (boolean)val);
+			} else if (val instanceof EEnumLiteral) {
+				return writer.createQuotedLiteral(description, ((EEnumLiteral)val).getLiteral(),null,null);
+			}
+			return writer.createQuotedLiteral(description, (String)val,null,null);
+		}
 	}
 
 	protected ConversionContext context;

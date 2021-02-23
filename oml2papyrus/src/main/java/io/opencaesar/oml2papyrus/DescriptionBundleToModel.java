@@ -228,6 +228,9 @@ public class DescriptionBundleToModel {
 			String targetName = getNamefromAnnotation(targetRel);
 			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
 			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
+			if (sourceFeature==null || targetFeature==null) {
+				System.out.println("Error");
+			}
 			setFeatureValue(sourceFeature,element,sources);
 			setFeatureValue(targetFeature,element,targets);
 		}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {

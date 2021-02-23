@@ -61,9 +61,9 @@ public class NamedInstanceConverter {
 
 		Member type = types.stream().filter(t -> !(t instanceof Aspect)).findFirst().orElse(null);
 		if (type instanceof Concept) {
-			ConceptInstanceConverter.convert(element, description, types, context);
+			ConceptInstanceConverter.convert(element, description,stereotypes, types, context);
 		} else if (type instanceof RelationEntity) {
-			context.deferred.add(new RelationConverter(description,element,(RelationEntity)type, context, types));
+			context.deferred.add(new RelationConverter(description,element, context, types));
 		}
 	}
 

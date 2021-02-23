@@ -13,6 +13,8 @@ import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EAnnotation;
+import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
@@ -68,6 +70,9 @@ import io.opencaesar.oml2papyrus.util.ProfileUtils;
 import io.opencaesar.oml2papyrus.util.UmlUtils;
 
 public class VocabularyBundleToProfile {
+
+	private static final String IRI_VALUE = "iri_value";
+	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
 
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
@@ -323,12 +328,19 @@ public class VocabularyBundleToProfile {
 		DataType rangeClass = getTypeForRange(range);
 		if (classifier instanceof Class) {
 			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
-			
+			String iri = OmlRead.getIri(prop);
+			setIRIAnnotation(umlProperty, iri);
 			convertAnnotations(umlProperty, prop);
-			
 			umlProperty.setLower(lower);
 			umlProperty.setUpper(upper);
 		}
+	}
+
+	private void setIRIAnnotation(Property umlProperty, String iri) {
+		EAnnotation annotatoin = EcoreFactory.eINSTANCE.createEAnnotation();
+		annotatoin.setSource(OMLIRI);
+		annotatoin.getDetails().put(IRI_VALUE, iri);
+		umlProperty.getEAnnotations().add(annotatoin);
 	}
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
@@ -345,6 +357,8 @@ public class VocabularyBundleToProfile {
 				logger.debug(entity);
 				ForwardRelation srcRel = entity.getForwardRelation();
 				ReverseRelation trgRel = entity.getReverseRelation();
+				String srcRelationIri = OmlRead.getIri(srcRel);
+				String targetRelationIri = trgRel==null ? "" : OmlRead.getIri(trgRel);
 				Entity src = srcRel.getDomain();
 				Entity trgt = srcRel.getRange();
 				Class srcClass = (Class) converted.get(src);
@@ -394,10 +408,10 @@ public class VocabularyBundleToProfile {
 						}
 					}
 				}
-				AssociationInfo aInfo = new AssociationInfo(trgClass,end1Name,end1Navigable,end1Lower,end1Upper,end2Name,end2Navigable,end2Lower,end2Upper);
+				AssociationInfo aInfo = new AssociationInfo(trgClass,end1Name,end1Navigable,end1Lower,end1Upper,end2Name,end2Navigable,end2Lower,end2Upper,srcRelationIri,targetRelationIri);
 				relationToAssociationInfo.put(entity, aInfo);
 				createAssociation(srcClass, trgClass, end1Name, end1Navigable, end2Name, end2Navigable, end1Lower,
-						end1Upper, end2Lower, end2Upper);
+						end1Upper, end2Lower, end2Upper,srcRelationIri, targetRelationIri);
 			}
 		}
 	}
@@ -444,17 +458,15 @@ public class VocabularyBundleToProfile {
 							Classifier src = converted.get(entity);
 							Classifier newTrgt = converted.get(newRange);
 							if (reverse) {
-								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper);
+								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper,info.srcIri, "");
 							}else {
-								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper);
-
+								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, "", info.trgtIri);
 							}
 						}
 					}
 				}
 			}
 		}
-		// get all voc entities
 	}
 
 	private boolean canConvert(Type type) {
@@ -538,7 +550,7 @@ public class VocabularyBundleToProfile {
 	}
 	
 	private void createAssociation(Classifier srcClass, Classifier trgClass, String end1Name, boolean end1Navigable,
-			String end2Name, boolean end2Navigable, int end1Lower, int end1Upper, int end2Lower, int end2Upper) {
+			String end2Name, boolean end2Navigable, int end1Lower, int end1Upper, int end2Lower, int end2Upper, String srcRelationIri, String targetRelationIri) {
 		AssociationKey key = new AssociationKey(srcClass,end1Name,trgClass,end2Name);
 		if (createdAssociations.contains(key)) {
 			return;
@@ -548,6 +560,14 @@ public class VocabularyBundleToProfile {
 		// if it is there it means it was handled at creation time
 		srcClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
 				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
+		if (!srcRelationIri.isBlank() && end1Navigable) {
+			Property att1 = srcClass.getAttribute(end1Name, trgClass);
+			setIRIAnnotation(att1, srcRelationIri);
+		}
+		if (!targetRelationIri.isBlank() && end2Navigable) {
+			Property att2 = trgClass.getAttribute(end2Name, srcClass);
+			setIRIAnnotation(att2, targetRelationIri);
+		}
 		createdAssociations.add(key);
 		// reverse Key
 		createdAssociations.add(new AssociationKey(trgClass,end2Name,srcClass,end1Name));
@@ -575,8 +595,11 @@ public class VocabularyBundleToProfile {
 		public int end1Upper = -1;
 		public int end2Lower = 0;
 		public int end2Upper = -1;
+		public String srcIri = "";
+		public String trgtIri = "";
+		
 		public AssociationInfo(Class trgtClass, String end1Name, boolean end1Navigable, int end1Lower, int end1Upper,
-							   String end2Name, boolean end2NAvigable, int end2Lower, int end2Upper) {
+							   String end2Name, boolean end2NAvigable, int end2Lower, int end2Upper, String srcIri, String trgtIri) {
 			this.trgClass = trgtClass;
 			this.end1Name = end1Name;
 			this.end1Navigable = end1Navigable;
@@ -586,6 +609,8 @@ public class VocabularyBundleToProfile {
 			this.end2Navigable = end2NAvigable;
 			this.end2Lower = end2Lower;
 			this.end2Upper = end2Upper;
+			this.srcIri = srcIri;
+			this.trgtIri = trgtIri;
 		}
 		
 		@Override
