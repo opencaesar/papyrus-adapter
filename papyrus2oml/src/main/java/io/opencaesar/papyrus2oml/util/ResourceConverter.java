@@ -64,7 +64,7 @@ public abstract class ResourceConverter {
 		}
 		
 		public boolean shouldFilterFeature(EStructuralFeature feature) {
-			return feature.getName().startsWith("base_");
+			return feature.isDerived() || feature.getName().startsWith("base_");
 		}
 		
 		public boolean shouldFilterFeature(Property prop) {
