@@ -8,7 +8,6 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.Classifier;
 import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
@@ -58,6 +57,7 @@ public class ConceptInstanceConverter {
 						}
 						if (feature instanceof EAttribute) {
 							for (Object value  : values) {
+								// TODO: handle structure
 								Literal literal = context.getLiteralValue(description, value);
 								context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
 							}
@@ -79,14 +79,6 @@ public class ConceptInstanceConverter {
 					}
 				}
 				
-			}
-		}
-		
-		if (element instanceof Classifier) {
-			Classifier clazz = (Classifier)element;
-			EList<Property> props = clazz.getAttributes();
-			for (Property prop : props) {
-				System.out.println(prop.getLabel());
 			}
 		}
 	}

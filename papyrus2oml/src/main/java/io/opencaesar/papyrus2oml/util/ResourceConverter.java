@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.Enumerator;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EEnumLiteral;
 import org.eclipse.emf.ecore.EObject;
@@ -79,6 +80,8 @@ public abstract class ResourceConverter {
 				return writer.createBooleanLiteral(description, (boolean)val);
 			} else if (val instanceof EEnumLiteral) {
 				return writer.createQuotedLiteral(description, ((EEnumLiteral)val).getLiteral(),null,null);
+			} else if (val instanceof Enumerator ) {
+				return writer.createQuotedLiteral(description, ((Enumerator)val).getLiteral(),null,null);
 			}
 			return writer.createQuotedLiteral(description, (String)val,null,null);
 		}
