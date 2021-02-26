@@ -16,6 +16,7 @@ import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.papyrus2oml.util.DSLPackageConverter;
 import io.opencaesar.papyrus2oml.util.ProfileConverter;
 import io.opencaesar.papyrus2oml.util.ResourceConverter;
 import io.opencaesar.papyrus2oml.util.UMLPackageConverter;
@@ -44,7 +45,7 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 			if (root instanceof Profile) {
 				converters.add(new ProfileConverter((Profile)root, catalog, writer, logger));
 			} else if (root instanceof Package) {
-				//converters.add(new DSLPackageConverter((Package)root, catalog, writer,rs, logger));
+				converters.add(new DSLPackageConverter((Package)root, catalog, writer,rs, logger));
 				converters.add(new UMLPackageConverter((Package)root, catalog, writer,rs, logger));
 			}
 		}

@@ -27,6 +27,22 @@ public class LinkConverter implements Runnable {
 		this.relationIri = relationIri;
 		this.target = target;
 	}
+	
+	public Description getDescription() {
+		return description;
+	}
+	
+	public String getInstanceIri() {
+		return instanceIri;
+	}
+	
+	public ConversionContext getContext() {
+		return context;
+	}
+	
+	public String getRelationIri() {
+		return relationIri;
+	}
 
 	@SuppressWarnings("rawtypes")
 	@Override
@@ -41,7 +57,7 @@ public class LinkConverter implements Runnable {
 		}
 	}
 
-	private void createLink(Object value) {
+	protected void createLink(Object value) {
 		EObject eValue = (EObject)value;		
 		Element baseElemnt = UMLUtil.getBaseElement(eValue);
 		IdentifiedElement omlElement = context.umlToOml.get(baseElemnt);
