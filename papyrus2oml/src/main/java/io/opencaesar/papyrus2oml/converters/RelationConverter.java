@@ -5,8 +5,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Stereotype;
+
+import com.sun.source.doctree.StartElementTree;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -25,13 +30,15 @@ public class RelationConverter implements Runnable {
 	private ConversionContext context;
 	private Description description;
 	List<Member> types;
+	List<Stereotype> stereotypes;
 
 	public RelationConverter(Description description, PackageableElement element,
-			ConversionContext context, List<Member> types) {
+			ConversionContext context, List<Member> types, List<Stereotype> stereotypes) {
 		this.element = element;
 		this.context = context;
 		this.description = description;
 		this.types = types;
+		this.stereotypes = stereotypes;
 	}
 
 	@Override
@@ -44,8 +51,14 @@ public class RelationConverter implements Runnable {
 		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
 				targets);
 		String instanceIri = OmlRead.getIri(instance);
+		int index = 0;
 		for (Member t : types) {
 			context.writer.addRelationTypeAssertion(description, instanceIri, OmlRead.getIri(t));
+			Stereotype st = stereotypes.get(index);
+			EObject stApp = element.getStereotypeApplication(st);
+			EClass eClass = stApp.eClass();
+			ConceptInstanceConverter.createAttributes(description, context, instanceIri, st, stApp, eClass);
+			index++;
 		}
 	}
 

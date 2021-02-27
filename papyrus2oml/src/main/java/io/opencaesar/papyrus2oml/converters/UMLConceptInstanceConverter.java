@@ -3,6 +3,7 @@ package io.opencaesar.papyrus2oml.converters;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
+import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.PackageableElement;
 import org.eclipse.xtext.xbase.lib.StringExtensions;
@@ -26,9 +27,15 @@ public class UMLConceptInstanceConverter {
 		context.writer.addConceptTypeAssertion(description, instanceIRI, OmlRead.getIri(type));
 		context.umlToOml.put(element, instance);
 		OMLUtil.addExtendsIfNeeded(description,  OmlRead.getOntology(type).getIri(), context.writer);	
+		createAttributes(element, context, description, instanceIRI);
+		createReferences(element, context, description, instanceIRI);
+	}
+
+	public static void createAttributes(PackageableElement element, ConversionContext context, Description description,
+			String instanceIRI) {
 		EClass umlclass = element.eClass();
-		EList<EStructuralFeature> attrs = umlclass.getEAllStructuralFeatures();
-		for (EStructuralFeature feature : attrs) {
+		EList<EAttribute> attrs = umlclass.getEAllAttributes();
+		for (EAttribute feature : attrs) {
 			if (context.shouldFilterFeature(feature)) {
 				continue;
 			}
@@ -36,25 +43,37 @@ public class UMLConceptInstanceConverter {
 			if (feature.isMany()) {
 				EList<?> values = (EList<?>) val;
 				if (!values.isEmpty()) {
-					if (feature instanceof EAttribute) {
-						String propIRI = getIri(feature);
-						for (Object value  : values) {
-							// TODO: handle structure
-							createProperty(context, description, instanceIRI, propIRI, value);
-						}
-					} else {
-						String propIRI = getIri(feature);
-						context.deferred.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
+					String propIRI = getIri(feature);
+					for (Object value  : values) {
+						// TODO: handle structure
+						createProperty(context, description, instanceIRI, propIRI, value);
 					}
 				}
 			}else if (val!=null) {
-				if (feature instanceof EAttribute) {
-					String propIRI = getIri(feature);
-					createProperty(context, description, instanceIRI, propIRI, val);
-				}else {
+				String propIRI = getIri(feature);
+				createProperty(context, description, instanceIRI, propIRI, val);
+			}
+		}
+	}
+	
+	public static void createReferences(PackageableElement element, ConversionContext context, Description description,
+			String instanceIRI) {
+		EClass umlclass = element.eClass();
+		EList<EReference> attrs = umlclass.getEAllReferences();
+		for (EReference feature : attrs) {
+			if (context.shouldFilterFeature(feature)) {
+				continue;
+			}
+			Object val = element.eGet(feature);
+			if (feature.isMany()) {
+				EList<?> values = (EList<?>) val;
+				if (!values.isEmpty()) {
 					String propIRI = getIri(feature);
 					context.deferred.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
 				}
+			}else if (val!=null) {
+				String propIRI = getIri(feature);
+				context.deferred.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
 			}
 		}
 	}
