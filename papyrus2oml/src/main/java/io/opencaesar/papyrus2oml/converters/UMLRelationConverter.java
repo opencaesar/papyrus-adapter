@@ -94,5 +94,6 @@ public class UMLRelationConverter implements Runnable {
 		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
 				targets);
 		context.writer.addRelationTypeAssertion(description, OmlRead.getIri(instance), OmlRead.getIri(type));
+		UMLConceptInstanceConverter.createAttributes(element, context, description, OmlRead.getIri(instance));
 	}
 }

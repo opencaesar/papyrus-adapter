@@ -37,49 +37,59 @@ public class ConceptInstanceConverter {
 		for (Stereotype stereoType : stereotypes) {
 			EObject stApplication = element.getStereotypeApplication(stereoType);
 			EClass eClass = stApplication.eClass();
-			EList<Property> props = stereoType.allAttributes();
-			for (Property prop : props) {
-				if (context.shouldFilterFeature(prop)) {
-					continue;
-				}
-				EStructuralFeature feature = eClass.getEStructuralFeature(prop.getName());
-				if (feature==null) {
-					continue;
-				}
-				Object val = stApplication.eGet(feature);
-				if (prop.isMultivalued()) {
-					EList<?> values = (EList<?>) val;
-					if (!values.isEmpty()) {
-						String propIRI = getIri(prop);
-						if (propIRI.isEmpty()) {
-							context.logger.error("Could not get IRI for " + prop.getName());
-							continue;
-						}
-						if (feature instanceof EAttribute) {
-							for (Object value  : values) {
-								// TODO: handle structure
-								Literal literal = context.getLiteralValue(description, value);
-								context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
-							}
-						}else {
-							context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
-						}
-					}
-				}else if (val!=null) {
+			createAttributesAndReferences(description, context, instanceIri, stereoType, stApplication, eClass,false);
+		}
+	}
+	
+	public static void createAttributes(Description description, ConversionContext context,
+			String instanceIri, Stereotype stereoType, EObject stApplication, EClass eClass) {
+		createAttributesAndReferences(description,context,instanceIri,stereoType,stApplication,eClass,true);
+	}
+
+	private static void createAttributesAndReferences(Description description, ConversionContext context,
+			String instanceIri, Stereotype stereoType, EObject stApplication, EClass eClass, boolean attrOnly) {
+		EList<Property> props = stereoType.allAttributes();
+		for (Property prop : props) {
+			if (context.shouldFilterFeature(prop)) {
+				continue;
+			}
+			EStructuralFeature feature = eClass.getEStructuralFeature(prop.getName());
+			if (feature==null) {
+				continue;
+			}
+			Object val = stApplication.eGet(feature);
+			if (prop.isMultivalued()) {
+				EList<?> values = (EList<?>) val;
+				if (!values.isEmpty()) {
 					String propIRI = getIri(prop);
 					if (propIRI.isEmpty()) {
 						context.logger.error("Could not get IRI for " + prop.getName());
 						continue;
 					}
 					if (feature instanceof EAttribute) {
-						Literal literal = context.getLiteralValue(description, val);
-						context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
-					}else {
+						for (Object value  : values) {
+							// TODO: handle structure
+							Literal literal = context.getLiteralValue(description, value);
+							context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+						}
+					}else if (!attrOnly) {
 						context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
 					}
 				}
-				
+			}else if (val!=null) {
+				String propIRI = getIri(prop);
+				if (propIRI.isEmpty()) {
+					context.logger.error("Could not get IRI for " + prop.getName());
+					continue;
+				}
+				if (feature instanceof EAttribute) {
+					Literal literal = context.getLiteralValue(description, val);
+					context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+				}else if (!attrOnly) {
+					context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+				}
 			}
+			
 		}
 	}
 	
@@ -90,5 +100,4 @@ public class ConceptInstanceConverter {
 		}
 		return "";
 	}
-
 }
