@@ -5,7 +5,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Element;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -16,15 +16,16 @@ import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
+import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLRelationConverter implements Runnable {
 
-	PackageableElement element;
+	Element element;
 	private RelationEntity type;
 	private ConversionContext context;
 	private Description description;
 
-	public UMLRelationConverter(PackageableElement element, RelationEntity type,Description description, ConversionContext context) {
+	public UMLRelationConverter(Element element, RelationEntity type,Description description, ConversionContext context) {
 		this.element = element;
 		this.type = type;
 		this.context = context;
@@ -42,6 +43,7 @@ public class UMLRelationConverter implements Runnable {
 			if (superEntity == null) {
 				break;
 			}
+			entity = superEntity;
 			sourceR = entity.getSourceRelation();
 		}
 
@@ -70,6 +72,7 @@ public class UMLRelationConverter implements Runnable {
 			if (superEntity == null) {
 				break;
 			}
+			entity = superEntity;
 			targetR = entity.getTargetRelation();
 		}
 
@@ -91,7 +94,7 @@ public class UMLRelationConverter implements Runnable {
 			}
 		}
 
-		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
+		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
 				targets);
 		context.writer.addRelationTypeAssertion(description, OmlRead.getIri(instance), OmlRead.getIri(type));
 		UMLConceptInstanceConverter.createAttributes(element, context, description, OmlRead.getIri(instance));

@@ -5,7 +5,7 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.xtext.xbase.lib.StringExtensions;
 
 import io.opencaesar.oml.ConceptInstance;
@@ -19,10 +19,10 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLConceptInstanceConverter {
 	
-	public static void convert(PackageableElement element,Member type,ConversionContext context ) {
+	public static void convert(Element element,Member type,ConversionContext context ) {
 		// attributes in this case are the properties of the element.eClass
 		Description description = (Description) context.umlToOml.get(element.getNearestPackage());
-		ConceptInstance instance = context.writer.addConceptInstance(description, element.getName());
+		ConceptInstance instance = context.writer.addConceptInstance(description, UmlUtils.getName(element));
 		String instanceIRI = OmlRead.getIri(instance);
 		context.writer.addConceptTypeAssertion(description, instanceIRI, OmlRead.getIri(type));
 		context.umlToOml.put(element, instance);
@@ -31,7 +31,7 @@ public class UMLConceptInstanceConverter {
 		createReferences(element, context, description, instanceIRI);
 	}
 
-	public static void createAttributes(PackageableElement element, ConversionContext context, Description description,
+	public static void createAttributes(Element element, ConversionContext context, Description description,
 			String instanceIRI) {
 		EClass umlclass = element.eClass();
 		EList<EAttribute> attrs = umlclass.getEAllAttributes();
@@ -56,7 +56,7 @@ public class UMLConceptInstanceConverter {
 		}
 	}
 	
-	public static void createReferences(PackageableElement element, ConversionContext context, Description description,
+	public static void createReferences(Element element, ConversionContext context, Description description,
 			String instanceIRI) {
 		EClass umlclass = element.eClass();
 		EList<EReference> attrs = umlclass.getEAllReferences();

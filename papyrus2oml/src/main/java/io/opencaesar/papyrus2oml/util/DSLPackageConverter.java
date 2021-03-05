@@ -7,7 +7,6 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Package;
-import org.eclipse.uml2.uml.PackageableElement;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
@@ -37,8 +36,8 @@ public class DSLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package) eObject, context);
-		} else if (eObject instanceof PackageableElement) {
-			NamedInstanceConverter.convert((PackageableElement) eObject, context);
+		} else if (eObject instanceof Element) {
+			NamedInstanceConverter.convert((Element) eObject, context);
 		} else {
 			System.out.println("Not Converted : " + eObject.eClass().getName());
 		}

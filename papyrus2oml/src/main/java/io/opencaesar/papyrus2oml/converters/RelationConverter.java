@@ -8,10 +8,8 @@ import java.util.List;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Stereotype;
-
-import com.sun.source.doctree.StartElementTree;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -24,15 +22,16 @@ import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
+import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class RelationConverter implements Runnable {
-	private PackageableElement element;
+	private Element element;
 	private ConversionContext context;
 	private Description description;
 	List<Member> types;
 	List<Stereotype> stereotypes;
 
-	public RelationConverter(Description description, PackageableElement element,
+	public RelationConverter(Description description, Element element,
 			ConversionContext context, List<Member> types, List<Stereotype> stereotypes) {
 		this.element = element;
 		this.context = context;
@@ -48,7 +47,7 @@ public class RelationConverter implements Runnable {
 		List<String> sources = extractValues(element, context, description, sourceR);
 		TargetRelation targetR = umlOmlElement.getTargetRelation();
 		List<String> targets = extractValues(element, context, description, targetR);
-		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
+		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
 				targets);
 		String instanceIri = OmlRead.getIri(instance);
 		int index = 0;
@@ -62,7 +61,7 @@ public class RelationConverter implements Runnable {
 		}
 	}
 
-	private List<String> extractValues(PackageableElement element, ConversionContext context, Description description,
+	private List<String> extractValues(Element element, ConversionContext context, Description description,
 			Relation relation) {
 		List<String> result = new ArrayList<>();
 		if (relation != null) {

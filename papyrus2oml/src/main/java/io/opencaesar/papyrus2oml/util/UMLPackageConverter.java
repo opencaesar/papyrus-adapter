@@ -5,9 +5,14 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.ElementImport;
 import org.eclipse.uml2.uml.Package;
-import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.PackageImport;
+import org.eclipse.uml2.uml.ProfileApplication;
+import org.eclipse.uml2.uml.Slot;
+import org.eclipse.uml2.uml.ValueSpecification;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
@@ -40,8 +45,21 @@ public class UMLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, "-uml", context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package)eObject,"-uml",context);
-		} else if (eObject instanceof PackageableElement) {
-			UMLNamedInstanceConverter.convert((PackageableElement)eObject,context);
+		} else if (eObject instanceof Comment) {
+			// 
+		} else if (eObject instanceof ValueSpecification) {
+			// 
+		} else if (eObject instanceof Slot) {
+			// 
+		} else if (eObject instanceof ProfileApplication ||
+				  eObject instanceof PackageImport ||
+				  eObject instanceof ElementImport) {
+			// 
+		} else if (eObject instanceof Element) {
+			System.out.println(UmlUtils.getName((Element)eObject));
+			UMLNamedInstanceConverter.convert((Element)eObject,context);
+		} else {
+			System.out.println("Not Converted : " + eObject.eClass().getName());
 		}
 	}
 }

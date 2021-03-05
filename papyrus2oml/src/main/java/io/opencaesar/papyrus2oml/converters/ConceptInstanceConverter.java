@@ -8,7 +8,7 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -17,6 +17,7 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.util.OmlRead;
+import io.opencaesar.papyrus2oml.util.UmlUtils;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 
 public class ConceptInstanceConverter {
@@ -24,9 +25,9 @@ public class ConceptInstanceConverter {
 	private static final String IRI_VALUE = "iri_value";
 	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
 
-	static public void convert(PackageableElement element, Description description, List<Stereotype> stereotypes, List<Member> types,
+	static public void convert(Element element, Description description, List<Stereotype> stereotypes, List<Member> types,
 			ConversionContext context) {
-		ConceptInstance instance = context.writer.addConceptInstance(description, element.getName());
+		ConceptInstance instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
 		context.umlToOml.put(element, instance);
 		String instanceIri = OmlRead.getIri(instance);
 		for (Member t : types) {

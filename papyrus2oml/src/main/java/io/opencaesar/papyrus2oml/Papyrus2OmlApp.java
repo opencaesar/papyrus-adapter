@@ -59,8 +59,8 @@ public class Papyrus2OmlApp {
 			required=false, 
 			order=2
 	)
+	
 	private List<String> ignoredIriPrefixes = null;
-
 	@Parameter(
 		names= {"--debug", "-d"}, 
 		description="Shows debug logging statements", 
@@ -149,9 +149,11 @@ public class Papyrus2OmlApp {
 	// Utility methods
 	
 	protected boolean shouldIgnoreIri(String iri) {
-		for (String prefix : ignoredIriPrefixes) {
-			if (iri.startsWith(prefix)) {
-				return true;
+		if (ignoredIriPrefixes!=null) {
+			for (String prefix : ignoredIriPrefixes) {
+				if (iri.startsWith(prefix)) {
+					return true;
+				}
 			}
 		}
 		return false;
