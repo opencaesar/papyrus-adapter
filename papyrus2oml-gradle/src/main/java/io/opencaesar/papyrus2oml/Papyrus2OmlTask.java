@@ -9,28 +9,28 @@ import org.gradle.api.tasks.TaskExecutionException;
 
 public class Papyrus2OmlTask extends DefaultTask {
 	
-	public String inputFolderPath = null;
+	public String inputModelPath;
+	
+	public String outputCatalogPath;
+	
+	public List<String> ignoredIriPrefixes;
 
-	public String inputModelPath = null;
-	
-	public String outputCatalogPath = null;
-	
 	public boolean debug;
 
     @TaskAction
     public void run() {
         List<String> args = new ArrayList<String>();
-        if (inputFolderPath != null) {
-		    args.add("-i");
-		    args.add(inputFolderPath);
-        }
         if (inputModelPath != null) {
-		    args.add("-m");
+		    args.add("-i");
 		    args.add(inputModelPath);
         }
         if (outputCatalogPath != null) {
 		    args.add("-o");
 		    args.add(outputCatalogPath);
+        }
+        for (String p : ignoredIriPrefixes) {
+		    args.add("-p");
+		    args.add(p);
         }
 	    if (debug) {
 		    args.add("-d");

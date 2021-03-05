@@ -8,9 +8,17 @@ import java.util.List;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
+<<<<<<< HEAD
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Stereotype;
 
+=======
+import org.eclipse.uml2.uml.PackageableElement;
+import org.eclipse.uml2.uml.Stereotype;
+
+import com.sun.source.doctree.StartElementTree;
+
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Member;
@@ -22,16 +30,26 @@ import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
+<<<<<<< HEAD
 import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class RelationConverter implements Runnable {
 	private Element element;
+=======
+
+public class RelationConverter implements Runnable {
+	private PackageableElement element;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 	private ConversionContext context;
 	private Description description;
 	List<Member> types;
 	List<Stereotype> stereotypes;
 
+<<<<<<< HEAD
 	public RelationConverter(Description description, Element element,
+=======
+	public RelationConverter(Description description, PackageableElement element,
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 			ConversionContext context, List<Member> types, List<Stereotype> stereotypes) {
 		this.element = element;
 		this.context = context;
@@ -47,7 +65,11 @@ public class RelationConverter implements Runnable {
 		List<String> sources = extractValues(element, context, description, sourceR);
 		TargetRelation targetR = umlOmlElement.getTargetRelation();
 		List<String> targets = extractValues(element, context, description, targetR);
+<<<<<<< HEAD
 		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
+=======
+		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 				targets);
 		String instanceIri = OmlRead.getIri(instance);
 		int index = 0;
@@ -61,7 +83,11 @@ public class RelationConverter implements Runnable {
 		}
 	}
 
+<<<<<<< HEAD
 	private List<String> extractValues(Element element, ConversionContext context, Description description,
+=======
+	private List<String> extractValues(PackageableElement element, ConversionContext context, Description description,
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 			Relation relation) {
 		List<String> result = new ArrayList<>();
 		if (relation != null) {

@@ -7,6 +7,10 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Package;
+<<<<<<< HEAD
+=======
+import org.eclipse.uml2.uml.PackageableElement;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
@@ -36,8 +40,13 @@ public class DSLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package) eObject, context);
+<<<<<<< HEAD
 		} else if (eObject instanceof Element) {
 			NamedInstanceConverter.convert((Element) eObject, context);
+=======
+		} else if (eObject instanceof PackageableElement) {
+			NamedInstanceConverter.convert((PackageableElement) eObject, context);
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 		} else {
 			System.out.println("Not Converted : " + eObject.eClass().getName());
 		}

@@ -45,7 +45,11 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 			if (root instanceof Profile) {
 				converters.add(new ProfileConverter((Profile)root, catalog, writer, logger));
 			} else if (root instanceof Package) {
+<<<<<<< HEAD
 				//converters.add(new DSLPackageConverter((Package)root, catalog, writer,rs, logger));
+=======
+				converters.add(new DSLPackageConverter((Package)root, catalog, writer,rs, logger));
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 				converters.add(new UMLPackageConverter((Package)root, catalog, writer,rs, logger));
 			}
 		}

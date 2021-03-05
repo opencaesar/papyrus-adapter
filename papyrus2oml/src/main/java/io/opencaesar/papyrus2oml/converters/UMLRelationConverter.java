@@ -5,7 +5,11 @@ import java.util.Collection;
 import java.util.List;
 
 import org.eclipse.emf.ecore.EStructuralFeature;
+<<<<<<< HEAD
 import org.eclipse.uml2.uml.Element;
+=======
+import org.eclipse.uml2.uml.PackageableElement;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -16,16 +20,27 @@ import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
+<<<<<<< HEAD
 import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLRelationConverter implements Runnable {
 
 	Element element;
+=======
+
+public class UMLRelationConverter implements Runnable {
+
+	PackageableElement element;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 	private RelationEntity type;
 	private ConversionContext context;
 	private Description description;
 
+<<<<<<< HEAD
 	public UMLRelationConverter(Element element, RelationEntity type,Description description, ConversionContext context) {
+=======
+	public UMLRelationConverter(PackageableElement element, RelationEntity type,Description description, ConversionContext context) {
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 		this.element = element;
 		this.type = type;
 		this.context = context;
@@ -43,7 +58,10 @@ public class UMLRelationConverter implements Runnable {
 			if (superEntity == null) {
 				break;
 			}
+<<<<<<< HEAD
 			entity = superEntity;
+=======
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 			sourceR = entity.getSourceRelation();
 		}
 
@@ -72,7 +90,10 @@ public class UMLRelationConverter implements Runnable {
 			if (superEntity == null) {
 				break;
 			}
+<<<<<<< HEAD
 			entity = superEntity;
+=======
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 			targetR = entity.getTargetRelation();
 		}
 
@@ -94,7 +115,11 @@ public class UMLRelationConverter implements Runnable {
 			}
 		}
 
+<<<<<<< HEAD
 		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
+=======
+		RelationInstance instance = context.writer.addRelationInstance(description, element.getName(), sources,
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 				targets);
 		context.writer.addRelationTypeAssertion(description, OmlRead.getIri(instance), OmlRead.getIri(type));
 		UMLConceptInstanceConverter.createAttributes(element, context, description, OmlRead.getIri(instance));

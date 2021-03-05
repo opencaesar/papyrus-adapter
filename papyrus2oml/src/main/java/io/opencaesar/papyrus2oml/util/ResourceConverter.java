@@ -14,12 +14,19 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+<<<<<<< HEAD
 import org.eclipse.uml2.uml.Element;
+=======
+import org.eclipse.uml2.uml.NamedElement;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Property;
 
 import io.opencaesar.oml.Description;
+<<<<<<< HEAD
 import io.opencaesar.oml.DescriptionBundle;
+=======
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.Vocabulary;
@@ -36,9 +43,14 @@ public abstract class ResourceConverter {
 		public Logger logger;
 		public List<Runnable> deferred = new ArrayList<>();
 		public Package rootPackage;
+<<<<<<< HEAD
 		public Map<Element, io.opencaesar.oml.IdentifiedElement> umlToOml = new HashMap<>();
 		private Vocabulary umlVoc;
 		public DescriptionBundle descriptionBundle;
+=======
+		public Map<NamedElement, io.opencaesar.oml.IdentifiedElement> umlToOml = new HashMap<>();
+		private Vocabulary umlVoc;
+>>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 		
 		public ConversionContext(OmlCatalog cat, OmlWriter writer, Logger logger) {
 			this.catalog = cat;
