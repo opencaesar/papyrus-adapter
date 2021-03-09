@@ -19,14 +19,14 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLConceptInstanceConverter {
 	
-	public static void convert(Element element,Member type,ConversionContext context ) {
+	public static void convert(Element element, Member type,ConversionContext context ) {
 		// attributes in this case are the properties of the element.eClass
 		Description description = (Description) context.umlToOml.get(element.getNearestPackage());
 		ConceptInstance instance = context.writer.addConceptInstance(description, UmlUtils.getName(element));
 		String instanceIRI = OmlRead.getIri(instance);
 		context.writer.addConceptTypeAssertion(description, instanceIRI, OmlRead.getIri(type));
 		context.umlToOml.put(element, instance);
-		OMLUtil.addExtendsIfNeeded(description,  OmlRead.getOntology(type).getIri(), context.writer);	
+		OMLUtil.addUsesIfNeeded(description,  OmlRead.getOntology(type).getIri(), context.writer);	
 		createAttributes(element, context, description, instanceIRI);
 		createReferences(element, context, description, instanceIRI);
 	}

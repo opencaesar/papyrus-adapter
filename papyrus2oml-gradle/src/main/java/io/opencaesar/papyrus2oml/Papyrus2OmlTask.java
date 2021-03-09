@@ -28,9 +28,11 @@ public class Papyrus2OmlTask extends DefaultTask {
 		    args.add("-o");
 		    args.add(outputCatalogPath);
         }
-        for (String p : ignoredIriPrefixes) {
-		    args.add("-p");
-		    args.add(p);
+        if (ignoredIriPrefixes != null) {
+	        for (String p : ignoredIriPrefixes) {
+			    args.add("-p");
+			    args.add(p);
+	        }
         }
 	    if (debug) {
 		    args.add("-d");

@@ -32,14 +32,15 @@ public class NamedInstanceConverter {
 			// so we need to still handle them as unreified relations
 			return;
 		}
-		
-		if (name.equals("dronemodel")) {
-			System.out.println("The one in questions");
-		}
 		Description description = (Description) context.umlToOml.get(element.getNearestPackage());
-		List<Stereotype> stereotypes = element.getAppliedStereotypes();
+		if (description == null) {
+			// this means the element is owned by the root model
+			// which is mapped to a description bundle not a description
+			return;
+		}
 		ResourceSet rs = description.eResource().getResourceSet();
 		List<Member> types = new ArrayList<>();
+		List<Stereotype> stereotypes = element.getAppliedStereotypes();
 		for (Stereotype s : stereotypes) {
 			Package package_ = s.getNearestPackage();
 			Import i = OMLUtil.addUsesIfNeeded(description, UmlUtils.getIRI(package_), context.writer);

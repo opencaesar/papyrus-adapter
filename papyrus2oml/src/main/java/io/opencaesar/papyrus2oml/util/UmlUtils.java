@@ -41,6 +41,7 @@ public class UmlUtils {
 			name = _getID(element);
 			names.add(name);
 		}else {
+			name = name.replaceAll("&", "_"); // TODO: replace other unexpected chars
 			if (!(element instanceof Package)) {
 				names.add(name);
 				getQualifiedNames(element.getOwner(), names);

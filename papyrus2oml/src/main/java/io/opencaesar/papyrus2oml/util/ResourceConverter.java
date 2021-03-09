@@ -31,6 +31,7 @@ import io.opencaesar.oml.util.OmlWriter;
 public abstract class ResourceConverter {
 	
 	public static class ConversionContext {
+		public List<String> ignoredIriPrefixes;
 		public OmlCatalog catalog;
 		public OmlWriter writer;
 		public Logger logger;
@@ -46,11 +47,9 @@ public abstract class ResourceConverter {
 			this.logger = logger;
 		}
 		
-		public ConversionContext(OmlCatalog cat, OmlWriter writer, ResourceSet rs, Logger logger) {
+		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlWriter writer, ResourceSet rs, Logger logger) {
 			this(cat,writer,logger);
-			this.catalog = cat;
-			this.writer = writer;
-			this.logger = logger;
+			this.ignoredIriPrefixes = ignoredIriPrefixes;
 			try {
 				final URI umlUri = URI.createURI(catalog.resolveURI(UmlUtils.UML_IRI) + "." + OmlConstants.OML_EXTENSION);
 				Resource r = rs.getResource(umlUri, true);

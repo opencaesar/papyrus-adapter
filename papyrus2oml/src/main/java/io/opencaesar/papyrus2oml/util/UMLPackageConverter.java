@@ -1,6 +1,7 @@
 package io.opencaesar.papyrus2oml.util;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
@@ -21,8 +22,8 @@ import io.opencaesar.papyrus2oml.converters.UMLNamedInstanceConverter;
 
 public class UMLPackageConverter extends ResourceConverter {
 	
-	public UMLPackageConverter(Package rootPackage, OmlCatalog catalog, OmlWriter writer,ResourceSet omlResourceSet, Logger logger) {
-		super(new ConversionContext(catalog, writer,omlResourceSet, logger));
+	public UMLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, Logger logger) {
+		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, omlResourceSet, logger));
 		context.rootPackage = rootPackage;
 	}
 	
