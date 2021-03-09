@@ -14,7 +14,6 @@ public class UmlUtils {
 	public static final String UML_IRI = "http://www.eclipse.org/uml2/5.0.0/UML";
 	
 	public static final String UML_NS = UML_IRI+"#";
-<<<<<<< HEAD
 	
 	public static String getIRI(Package package_) {
 		String iri = package_.getURI();
@@ -59,7 +58,4 @@ public class UmlUtils {
 		qName.append(names.get(0));
 		return qName.toString();
 	}
-=======
-
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 }

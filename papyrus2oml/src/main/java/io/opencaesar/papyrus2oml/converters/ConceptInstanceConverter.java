@@ -8,11 +8,7 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-<<<<<<< HEAD
 import org.eclipse.uml2.uml.Element;
-=======
-import org.eclipse.uml2.uml.PackageableElement;
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -21,10 +17,7 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.util.OmlRead;
-<<<<<<< HEAD
 import io.opencaesar.papyrus2oml.util.UmlUtils;
-=======
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 
 public class ConceptInstanceConverter {
@@ -32,15 +25,9 @@ public class ConceptInstanceConverter {
 	private static final String IRI_VALUE = "iri_value";
 	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
 
-<<<<<<< HEAD
 	static public void convert(Element element, Description description, List<Stereotype> stereotypes, List<Member> types,
 			ConversionContext context) {
 		ConceptInstance instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
-=======
-	static public void convert(PackageableElement element, Description description, List<Stereotype> stereotypes, List<Member> types,
-			ConversionContext context) {
-		ConceptInstance instance = context.writer.addConceptInstance(description, element.getName());
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 		context.umlToOml.put(element, instance);
 		String instanceIri = OmlRead.getIri(instance);
 		for (Member t : types) {

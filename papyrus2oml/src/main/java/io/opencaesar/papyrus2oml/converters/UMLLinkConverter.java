@@ -1,9 +1,5 @@
 package io.opencaesar.papyrus2oml.converters;
 
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.uml2.uml.Element;
-import org.eclipse.uml2.uml.util.UMLUtil;
-
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Ontology;

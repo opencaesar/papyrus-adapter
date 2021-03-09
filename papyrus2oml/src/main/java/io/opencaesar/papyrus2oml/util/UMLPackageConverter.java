@@ -5,13 +5,9 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-<<<<<<< HEAD
 import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.ElementImport;
-=======
-import org.eclipse.uml2.uml.Element;
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageImport;
 import org.eclipse.uml2.uml.ProfileApplication;
@@ -49,7 +45,6 @@ public class UMLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, "-uml", context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package)eObject,"-uml",context);
-<<<<<<< HEAD
 		} else if (eObject instanceof Comment) {
 			// 
 		} else if (eObject instanceof ValueSpecification) {
@@ -65,10 +60,6 @@ public class UMLPackageConverter extends ResourceConverter {
 			UMLNamedInstanceConverter.convert((Element)eObject,context);
 		} else {
 			System.out.println("Not Converted : " + eObject.eClass().getName());
-=======
-		} else if (eObject instanceof PackageableElement) {
-			UMLNamedInstanceConverter.convert((PackageableElement)eObject,context);
->>>>>>> fb0272b46f891d370a0345e19bd8ad35bf7f1965
 		}
 	}
 }
