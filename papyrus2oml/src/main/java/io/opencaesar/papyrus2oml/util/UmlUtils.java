@@ -41,8 +41,8 @@ public class UmlUtils {
 			name = _getID(element);
 			names.add(name);
 		}else {
-			names.add(name);
 			if (!(element instanceof Package)) {
+				names.add(name);
 				getQualifiedNames(element.getOwner(), names);
 			}
 		}
@@ -58,4 +58,5 @@ public class UmlUtils {
 		qName.append(names.get(0));
 		return qName.toString();
 	}
+
 }
