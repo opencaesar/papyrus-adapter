@@ -23,8 +23,8 @@ public class PackageConverter {
 
 		if (!empty) {
 			final String prefix = package_.getName();
-			String iri = UmlUtils.getIRI(package_);
-			final URI uri = URI.createURI(context.catalog.resolveURI(iri) + postFix + "." + OmlConstants.OML_EXTENSION);
+			String iri = UmlUtils.getIRI(package_) + postFix;
+			final URI uri = URI.createURI(context.catalog.resolveURI(iri) + "." + OmlConstants.OML_EXTENSION);
 
 			Description description = context.writer.createDescription(uri, iri, SeparatorKind.HASH, prefix);
 			context.umlToOml.put(package_, description);
@@ -41,10 +41,10 @@ public class PackageConverter {
 	
 	static public void convertRootPackage(Package package_,String postFix, ConversionContext context) throws IOException {
 		final String prefix = package_.getName();
-		String iri = UmlUtils.getIRI(package_);
+		String iri = UmlUtils.getIRI(package_) + postFix;
 		boolean empty = package_.getPackagedElements().stream().filter(e -> !(e instanceof Package)).count() == 0;
-		iri = empty ? iri : iri + "-bunlde";
-		final URI uri = URI.createURI(context.catalog.resolveURI(iri) +postFix +  "." + OmlConstants.OML_EXTENSION);
+		iri = empty ? iri : iri + "-bundle";
+		final URI uri = URI.createURI(context.catalog.resolveURI(iri) +   "." + OmlConstants.OML_EXTENSION);
 		DescriptionBundle bundle = context.writer.createDescriptionBundle(uri, iri, SeparatorKind.HASH, prefix);
 		context.descriptionBundle = bundle;
 		if (!empty) {
