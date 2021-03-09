@@ -19,11 +19,17 @@ import io.opencaesar.oml.util.OmlWriter;
 import io.opencaesar.papyrus2oml.util.DSLPackageConverter;
 import io.opencaesar.papyrus2oml.util.ProfileConverter;
 import io.opencaesar.papyrus2oml.util.ResourceConverter;
+import io.opencaesar.papyrus2oml.util.UMLPackageConverter;
 
 public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 	
-	public Papyrus2OmlConverter(File inputModelFile, OmlCatalog catalog, OmlWriter writer, Logger logger) {
+	private ResourceSet rs;
+	private List<String> ignoredIriPrefixes;
+
+	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, Logger logger) {
 		super(inputModelFile, catalog, writer, logger);
+		this.rs = omlResourceSet;
+		this.ignoredIriPrefixes = ignoredIriPrefixes;
 	}
 
 	@Override
@@ -41,8 +47,8 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 			if (root instanceof Profile) {
 				converters.add(new ProfileConverter((Profile)root, catalog, writer, logger));
 			} else if (root instanceof Package) {
-				converters.add(new DSLPackageConverter((Package)root, catalog, writer, logger));
-				//converters.add(new UMLPackageConverter((Package)root, catalog, writer, logger));
+				//converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
+				converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
 			}
 		}
 		return converters;

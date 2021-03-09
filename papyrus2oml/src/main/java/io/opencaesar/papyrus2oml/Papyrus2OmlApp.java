@@ -30,6 +30,7 @@ import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlWriter;
 import io.opencaesar.oml.util.OmlXMIResourceFactory;
+import io.opencaesar.papyrus2oml.util.OMLUtil;
 
 public class Papyrus2OmlApp {
 
@@ -59,8 +60,8 @@ public class Papyrus2OmlApp {
 			required=false, 
 			order=2
 	)
+	
 	private List<String> ignoredIriPrefixes = null;
-
 	@Parameter(
 		names= {"--debug", "-d"}, 
 		description="Shows debug logging statements", 
@@ -126,7 +127,7 @@ public class Papyrus2OmlApp {
 		writer.start();
 				
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, catalog, writer, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet, LOGGER);
 		omlResources.addAll(converter.convert());
 
 		// finish the Oml writer
@@ -136,7 +137,7 @@ public class Papyrus2OmlApp {
 		for (Resource resource : omlResources) {
 			LOGGER.info("Saving: "+resource.getURI());
 			Ontology ontology = OmlRead.getOntology(resource);
-			if (!shouldIgnoreIri(ontology.getIri())) {
+			if (!OMLUtil.shouldIgnoreIri(ignoredIriPrefixes, ontology.getIri())) {
 				resource.save(Collections.EMPTY_MAP);
 			}
 		}
@@ -146,17 +147,6 @@ public class Papyrus2OmlApp {
 		LOGGER.info("=================================================================");
 	}
 
-	// Utility methods
-	
-	protected boolean shouldIgnoreIri(String iri) {
-		for (String prefix : ignoredIriPrefixes) {
-			if (iri.startsWith(prefix)) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
 	/**
 	 * Get application version id from properties file.
 	 * @return version string from build.properties or UNKNOWN
