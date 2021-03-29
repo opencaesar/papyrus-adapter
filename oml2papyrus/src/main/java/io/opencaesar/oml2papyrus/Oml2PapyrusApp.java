@@ -59,6 +59,7 @@ public class Oml2PapyrusApp {
 		required=true, 
 		order=3
 	)
+	
 	private String outputFolderPath = null;
 		
 	@Parameter(
@@ -81,7 +82,7 @@ public class Oml2PapyrusApp {
 		description="Force link to be conveted to reified realtions", 
 		order=6
 	) 
-	private boolean forceReifiedLinks;
+	private boolean forceReifiedLinks=false;
 
     private final static Logger LOGGER = Logger.getLogger(Oml2PapyrusApp.class);
 

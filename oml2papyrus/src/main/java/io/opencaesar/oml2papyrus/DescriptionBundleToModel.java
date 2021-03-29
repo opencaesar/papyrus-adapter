@@ -125,7 +125,10 @@ public class DescriptionBundleToModel {
 		this.umlVoc = umlVoc[0];
 		// Convert each description
 		allDescriptions.forEach(d -> visitor.doSwitch(d));
+		logger.info("Converting Relations:");
 		relations.forEach(r -> convertRelationInstance(r));
+		System.out.println("");
+		logger.info("Converting Links:");
 		links.forEach(l -> convertLink(l));
 		return outputResource;
 	}
@@ -193,6 +196,7 @@ public class DescriptionBundleToModel {
 	}
 	
 	public void convertRelationInstance(RelationInstance object) {
+		System.out.print(".");
 		List<RelationTypeAssertion> assertions = OmlSearch.findTypeAssertions(object);
 		if (assertions.isEmpty()) {
 			throw new IllegalArgumentException("relation instance "+OmlRead.getIri(object)+" does not have a type");
@@ -209,16 +213,12 @@ public class DescriptionBundleToModel {
 			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
 		}
 		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
-		if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
-			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
-		}
 		
 		PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
 		element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
 		oml2EcoreMap.put(object, element);
 		List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
 		List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
-
 		Entity entity = getUMLEntityByName(eClass.getName());
 		if (entity instanceof RelationEntity) {
 			RelationEntity umlRelEntity = (RelationEntity)entity;
@@ -229,7 +229,7 @@ public class DescriptionBundleToModel {
 			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
 			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
 			if (sourceFeature==null || targetFeature==null) {
-				System.out.println("Error");
+				logger.error("Error: converting relation");
 			}
 			setFeatureValue(sourceFeature,element,sources);
 			setFeatureValue(targetFeature,element,targets);
@@ -255,6 +255,7 @@ public class DescriptionBundleToModel {
 	}
 
 	private void createAssociation(List<NamedElement> sources, List<NamedElement> targets) {
+		//TODO: annotation to provide info for the system about the aggregation kind and and who owns the navigable end is it the association or the source
 		Association association = UMLFactory.eINSTANCE.createAssociation();
 		List<Property> props = new ArrayList<>();
 		for (NamedElement sourceType : sources) {
@@ -269,8 +270,8 @@ public class DescriptionBundleToModel {
 			Property prop = UMLFactory.eINSTANCE.createProperty();
 			prop.setAggregation(AggregationKind.NONE_LITERAL);
 			prop.setType((Type)targetType);
-			prop.setIsNavigable(targets.size()==1);
 			association.getNavigableOwnedEnds().add(prop);
+			prop.setIsNavigable(targets.size()==1);
 			props.add(prop);
 		}
 		association.getMemberEnds().addAll(props);
@@ -313,9 +314,6 @@ public class DescriptionBundleToModel {
 		
 		// reified flow should be triggered if the reified flag is ON
 		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
-		if (!UMLPackage.Literals.DIRECTED_RELATIONSHIP.isSuperTypeOf(eClass)) {
-			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" extends metaclass "+eClass.getName()+" which is not a directed relationship" );
-		}
 		
 		NamedElement source = (NamedElement) oml2EcoreMap.get(OmlRead.getSource(object));
 		NamedElement target = (NamedElement) oml2EcoreMap.get(object.getTarget());
@@ -327,7 +325,6 @@ public class DescriptionBundleToModel {
 
 			org.eclipse.uml2.uml.Package package_ = (Package) oml2EcoreMap.get(OmlRead.getOntology(object));
 			package_.getPackagedElements().add(element);
-	
 			Entity entity = getUMLEntityByName(eClass.getName());
 			if (entity instanceof RelationEntity) {
 				RelationEntity umlRelEntity = (RelationEntity)entity;
@@ -358,7 +355,6 @@ public class DescriptionBundleToModel {
 			}else  {
 				sourceApplication.eSet(feature, targetApplication);
 			}
-
 		}
 	}
 	
