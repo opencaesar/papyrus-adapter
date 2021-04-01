@@ -234,7 +234,7 @@ public class DescriptionBundleToModel {
 			setFeatureValue(sourceFeature,element,sources);
 			setFeatureValue(targetFeature,element,targets);
 		}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
-			createAssociation(sources, targets);
+			setAssociationDetails((Association)element,sources, targets);
 		}
 
 		org.eclipse.uml2.uml.Package package_ = (org.eclipse.uml2.uml.Package) oml2EcoreMap.get(OmlRead.getOntology(object));
@@ -254,15 +254,13 @@ public class DescriptionBundleToModel {
 			});
 	}
 
-	private void createAssociation(List<NamedElement> sources, List<NamedElement> targets) {
+	private void setAssociationDetails(Association association, List<NamedElement> sources, List<NamedElement> targets) {
 		//TODO: annotation to provide info for the system about the aggregation kind and and who owns the navigable end is it the association or the source
-		Association association = UMLFactory.eINSTANCE.createAssociation();
 		List<Property> props = new ArrayList<>();
 		for (NamedElement sourceType : sources) {
 			Property prop = UMLFactory.eINSTANCE.createProperty();
 			prop.setAggregation(AggregationKind.NONE_LITERAL);
 			prop.setType((Type)sourceType);
-			prop.setIsNavigable(false);
 			association.getOwnedEnds().add(prop);
 			props.add(prop);
 		}
@@ -271,7 +269,7 @@ public class DescriptionBundleToModel {
 			prop.setAggregation(AggregationKind.NONE_LITERAL);
 			prop.setType((Type)targetType);
 			association.getNavigableOwnedEnds().add(prop);
-			prop.setIsNavigable(targets.size()==1);
+			//prop.setIsNavigable(targets.size()==1);
 			props.add(prop);
 		}
 		association.getMemberEnds().addAll(props);
@@ -337,7 +335,7 @@ public class DescriptionBundleToModel {
 				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
 				setFeatureValue(targetFeature,element,Collections.singletonList(target));
 			}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
-				createAssociation(Collections.singletonList(source), Collections.singletonList(target));
+				setAssociationDetails((Association)element,Collections.singletonList(source), Collections.singletonList(target));
 			}
 			element.applyStereotype(stereotype);
 		}else {
