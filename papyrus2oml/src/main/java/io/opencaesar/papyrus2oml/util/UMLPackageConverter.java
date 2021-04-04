@@ -57,7 +57,6 @@ public class UMLPackageConverter extends ResourceConverter {
 				  eObject instanceof ElementImport) {
 			// 
 		} else if (eObject instanceof Element) {
-			System.out.println(UmlUtils.getName((Element)eObject));
 			UMLNamedInstanceConverter.convert((Element)eObject,context);
 		} else {
 			System.out.println("Not Converted : " + eObject.eClass().getName());

@@ -22,9 +22,11 @@ public class UMLNamedInstanceConverter {
 				UMLConceptInstanceConverter.convert(element, type, context);
 			} else if (type instanceof RelationEntity) {
 				context.deferred.add(new UMLRelationConverter(element,(RelationEntity) type, description, context));
+			} else {
+				context.logger.warn("Did not convert: " + element);
 			}
 		}else {
-			System.out.println("Did not convert");
+			context.logger.warn("Did not convert: " + element);
 		}
 	}
 }
