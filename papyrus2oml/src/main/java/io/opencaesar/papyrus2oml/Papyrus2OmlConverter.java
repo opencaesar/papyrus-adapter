@@ -25,11 +25,13 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 	
 	private ResourceSet rs;
 	private List<String> ignoredIriPrefixes;
+	private boolean dsl = false;
 
-	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, Logger logger) {
+	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, boolean DSL, Logger logger) {
 		super(inputModelFile, catalog, writer, logger);
 		this.rs = omlResourceSet;
 		this.ignoredIriPrefixes = ignoredIriPrefixes;
+		this.dsl = DSL;
 	}
 
 	@Override
@@ -47,8 +49,11 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 			if (root instanceof Profile) {
 				converters.add(new ProfileConverter((Profile)root, catalog, writer, logger));
 			} else if (root instanceof Package) {
-				//converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
-				converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
+				if (dsl) {
+					converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
+				} else {
+					converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
+				}
 			}
 		}
 		return converters;

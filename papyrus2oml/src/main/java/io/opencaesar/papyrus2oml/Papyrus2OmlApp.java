@@ -50,7 +50,7 @@ public class Papyrus2OmlApp {
 		description="Path to the output OML catalog file (Required)", 
 		validateWith=CatalogPath.class, 
 		required=true, 
-		order=3
+		order=2
 	)
 	private String outputCatalogPath;
 		
@@ -58,14 +58,24 @@ public class Papyrus2OmlApp {
 			names= {"--ignored-iri-prefix","-p"}, 
 			description="Prefixes of IRIs to ignore converting (Optional)",
 			required=false, 
-			order=2
+			order=3
 	)
 	
 	private List<String> ignoredIriPrefixes = null;
+	
+	
+	@Parameter(
+			names= {"--DSL-conversion-type","-dsl"}, 
+			description="Prefixes of IRIs to ignore converting (Optional)",
+			required=false, 
+			order=4
+	)
+	private boolean DSL = false;
+	
 	@Parameter(
 		names= {"--debug", "-d"}, 
 		description="Shows debug logging statements", 
-		order=4
+		order=5
 	)
 	private boolean debug;
 
@@ -73,7 +83,7 @@ public class Papyrus2OmlApp {
 		names= {"--help","-h"}, 
 		description="Displays summary of options", 
 		help=true, 
-		order=5) 
+		order=6) 
 	private boolean help;
 
 	private Logger LOGGER = LogManager.getLogger(Papyrus2OmlApp.class);
@@ -127,7 +137,7 @@ public class Papyrus2OmlApp {
 		writer.start();
 				
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet,DSL, LOGGER);
 		omlResources.addAll(converter.convert());
 
 		// finish the Oml writer

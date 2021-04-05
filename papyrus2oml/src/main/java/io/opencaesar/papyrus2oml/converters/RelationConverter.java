@@ -9,15 +9,14 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
+
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Member;
-import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationEntity;
 import io.opencaesar.oml.RelationInstance;
-import io.opencaesar.oml.SourceRelation;
-import io.opencaesar.oml.TargetRelation;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
@@ -29,8 +28,9 @@ public class RelationConverter implements Runnable {
 	private Description description;
 	List<Member> types;
 	List<Stereotype> stereotypes;
-	public RelationConverter(Description description, Element element,
-			ConversionContext context, List<Member> types, List<Stereotype> stereotypes) {
+
+	public RelationConverter(Description description, Element element, ConversionContext context, List<Member> types,
+			List<Stereotype> stereotypes) {
 		this.element = element;
 		this.context = context;
 		this.description = description;
@@ -40,12 +40,12 @@ public class RelationConverter implements Runnable {
 
 	@Override
 	public void run() {
-		RelationEntity umlOmlElement = (RelationEntity)context.getUmlOmlElementByName(element.eClass().getName());
-		SourceRelation sourceR = umlOmlElement.getSourceRelation();
-		List<String> sources = extractValues(element, context, description, sourceR);
-		TargetRelation targetR = umlOmlElement.getTargetRelation();
-		List<String> targets = extractValues(element, context, description, targetR);
-		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
+		System.out.print(".");
+		String sourceName = getFeatureName(element, true, context);
+		String targetName = getFeatureName(element, false, context);
+		List<String> sources = extractValues(element, context, description, sourceName);
+		List<String> targets = extractValues(element, context, description, targetName);
+		RelationInstance instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,
 				targets);
 		String instanceIri = OmlRead.getIri(instance);
 		int index = 0;
@@ -57,23 +57,48 @@ public class RelationConverter implements Runnable {
 			ConceptInstanceConverter.createAttributes(description, context, instanceIri, st, stApp, eClass);
 			index++;
 		}
+		context.umlToOml.put(element, instance);
+	}
+
+	private static String getFeatureName(Element element, boolean source, ConversionContext context) {
+		Member umlOmlElement = context.getUmlOmlElementByName(element.eClass().getName());
+		Member namedMember;
+		if (source) {
+			if (umlOmlElement instanceof RelationEntity) {
+				namedMember = ((RelationEntity) umlOmlElement).getSourceRelation();
+			} else {
+				// this means it is an association
+				return "ownedEnd";
+			}
+		} else {
+			if (umlOmlElement instanceof RelationEntity) {
+				namedMember = ((RelationEntity) umlOmlElement).getTargetRelation();
+			} else {
+				return "navigableOwnedEnd";
+			}
+		}
+		return namedMember.getName().split("_")[1];
 	}
 
 	private List<String> extractValues(Element element, ConversionContext context, Description description,
-			Relation relation) {
+			String featureName) {
 		List<String> result = new ArrayList<>();
-		if (relation != null) {
-			String name = relation.getName().split("_")[1];
-			EStructuralFeature f = element.eClass().getEStructuralFeature(name);
-			Object values = element.eGet(f);
-			Collection<?> valueAsCollection = null;
-			if (values instanceof Collection<?>) {
-				valueAsCollection = (Collection<?>) values;
-			} else {
-				valueAsCollection = Collections.singleton(values);
+		EStructuralFeature f = element.eClass().getEStructuralFeature(featureName);
+		Object values = element.eGet(f);
+		Collection<?> valueAsCollection = null;
+		if (values instanceof Collection<?>) {
+			valueAsCollection = (Collection<?>) values;
+		} else {
+			valueAsCollection = Collections.singleton(values);
+		}
+		for (Object value : valueAsCollection) {
+			if (value instanceof Property) {
+				value = ((Property) value).getType();
 			}
-			for (Object value : valueAsCollection) {
-				IdentifiedElement e = context.umlToOml.get(value);
+			IdentifiedElement e = context.umlToOml.get(value);
+			if (e == null) {
+				System.out.println("problem");
+			} else {
 				result.add(OmlRead.getIri(e));
 				OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
 			}

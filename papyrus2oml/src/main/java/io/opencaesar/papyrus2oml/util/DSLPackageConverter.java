@@ -16,7 +16,8 @@ import io.opencaesar.papyrus2oml.converters.PackageConverter;
 
 public class DSLPackageConverter extends ResourceConverter {
 
-	public DSLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet rs, Logger logger) {
+	public DSLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog,
+			OmlWriter writer, ResourceSet rs, Logger logger) {
 		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, rs, logger));
 		context.rootPackage = rootPackage;
 	}
@@ -28,7 +29,9 @@ public class DSLPackageConverter extends ResourceConverter {
 
 	@Override
 	public void finish() {
+		context.logger.info("Reations Conversion: ");
 		context.deferred.forEach(r -> r.run());
+		System.out.println("");
 	}
 
 	@Override
