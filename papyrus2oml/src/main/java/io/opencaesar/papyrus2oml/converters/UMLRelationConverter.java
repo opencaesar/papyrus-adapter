@@ -66,8 +66,6 @@ public class UMLRelationConverter implements Runnable {
 		}
 		
 		List<String> targets = convertElements(element, context, description, targetR);
-
-
 		RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), sources,
 				targets);
 		context.writer.addRelationTypeAssertion(description, OmlRead.getIri(instance), OmlRead.getIri(type));

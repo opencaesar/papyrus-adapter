@@ -5,12 +5,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.uml2.uml.Association;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
+import org.eclipse.uml2.uml.Type;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -41,12 +44,18 @@ public class RelationConverter implements Runnable {
 	@Override
 	public void run() {
 		System.out.print(".");
-		String sourceName = getFeatureName(element, true, context);
-		String targetName = getFeatureName(element, false, context);
-		List<String> sources = extractValues(element, context, description, sourceName);
-		List<String> targets = extractValues(element, context, description, targetName);
-		RelationInstance instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,
-				targets);
+		List<String> sources = null;
+		List<String> targets = null;
+		if (element instanceof Association) {
+			sources = getAssociationEnds((Association)element, context, description, true);
+			targets = getAssociationEnds((Association)element, context, description, false);
+		}else {
+			String sourceName = getFeatureName(element, true, context);
+			String targetName = getFeatureName(element, false, context);
+			sources = extractValues(element, context, description, sourceName);
+			targets = extractValues(element, context, description, targetName);
+		}
+		RelationInstance instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,targets);
 		String instanceIri = OmlRead.getIri(instance);
 		int index = 0;
 		for (Member t : types) {
@@ -60,22 +69,33 @@ public class RelationConverter implements Runnable {
 		context.umlToOml.put(element, instance);
 	}
 
+	private List<String> getAssociationEnds(Association association, ConversionContext context2, Description description2,
+			boolean source) {
+		EList<Property> ends = association.getMemberEnds();
+		if (source) {
+			List<String> result = new ArrayList<>();
+			for (int index = 0 ; index < ends.size()-1; index++) {
+				result.add(getIRI(ends.get(index)));
+			}
+			return result;
+		}
+		return Collections.singletonList(getIRI(ends.get(ends.size()-1)));
+	}
+
+	private String getIRI(Property property) {
+		Type value = property.getType();
+		IdentifiedElement e = context.umlToOml.get(value);
+		OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
+		return OmlRead.getIri(e);
+	}
+
 	private static String getFeatureName(Element element, boolean source, ConversionContext context) {
 		Member umlOmlElement = context.getUmlOmlElementByName(element.eClass().getName());
-		Member namedMember;
+		Member namedMember = null;
 		if (source) {
-			if (umlOmlElement instanceof RelationEntity) {
-				namedMember = ((RelationEntity) umlOmlElement).getSourceRelation();
-			} else {
-				// this means it is an association
-				return "ownedEnd";
-			}
+			namedMember = ((RelationEntity) umlOmlElement).getSourceRelation();
 		} else {
-			if (umlOmlElement instanceof RelationEntity) {
-				namedMember = ((RelationEntity) umlOmlElement).getTargetRelation();
-			} else {
-				return "navigableOwnedEnd";
-			}
+			namedMember = ((RelationEntity) umlOmlElement).getTargetRelation();
 		}
 		return namedMember.getName().split("_")[1];
 	}
@@ -92,16 +112,9 @@ public class RelationConverter implements Runnable {
 			valueAsCollection = Collections.singleton(values);
 		}
 		for (Object value : valueAsCollection) {
-			if (value instanceof Property) {
-				value = ((Property) value).getType();
-			}
 			IdentifiedElement e = context.umlToOml.get(value);
-			if (e == null) {
-				System.out.println("problem");
-			} else {
-				result.add(OmlRead.getIri(e));
-				OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
-			}
+			result.add(OmlRead.getIri(e));
+			OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
 		}
 		return result;
 	}
