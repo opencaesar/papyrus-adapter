@@ -65,12 +65,12 @@ public class Papyrus2OmlApp {
 	
 	
 	@Parameter(
-			names= {"--DSL-conversion-type","-dsl"}, 
+			names= {"--conversion-type","-c"}, 
 			description="Prefixes of IRIs to ignore converting (Optional)",
 			required=false, 
 			order=4
 	)
-	private boolean DSL = false;
+	private String conv_type_str = "UML";
 	
 	@Parameter(
 		names= {"--debug", "-d"}, 
@@ -136,8 +136,26 @@ public class Papyrus2OmlApp {
 		final OmlWriter writer = new OmlWriter(omlResourceSet);
 		writer.start();
 				
+		ConversionType conversionType = ConversionType.UML;
+		switch (conv_type_str) {
+		case "UML":
+		case "uml":
+			conversionType = ConversionType.UML;
+			break;
+		case "DSL":
+		case "dsl":
+			conversionType = ConversionType.DSL;
+			break;
+		case "DSL-UML":
+		case "dsl-uml":
+		case "UML-DSL":
+		case "uml-dsl":
+			conversionType = ConversionType.UML_DSL;
+			break;
+			
+		}
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet,DSL, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet,conversionType, LOGGER);
 		omlResources.addAll(converter.convert());
 
 		// finish the Oml writer

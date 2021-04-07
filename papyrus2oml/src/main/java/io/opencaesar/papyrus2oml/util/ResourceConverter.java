@@ -27,6 +27,7 @@ import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlConstants;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.papyrus2oml.ConversionType;
 
 public abstract class ResourceConverter {
 	
@@ -40,15 +41,17 @@ public abstract class ResourceConverter {
 		public Map<Element, io.opencaesar.oml.IdentifiedElement> umlToOml = new HashMap<>();
 		private Vocabulary umlVoc;
 		public DescriptionBundle descriptionBundle;
+		public ConversionType conversionTYpe;
 
-		public ConversionContext(OmlCatalog cat, OmlWriter writer, Logger logger) {
+		public ConversionContext(OmlCatalog cat, OmlWriter writer, ConversionType conversionType, Logger logger) {
 			this.catalog = cat;
 			this.writer = writer;
 			this.logger = logger;
+			this.conversionTYpe = conversionType;
 		}
 		
-		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlWriter writer, ResourceSet rs, Logger logger) {
-			this(cat,writer,logger);
+		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlWriter writer, ResourceSet rs, ConversionType conversionType, Logger logger) {
+			this(cat,writer,conversionType,logger);
 			this.ignoredIriPrefixes = ignoredIriPrefixes;
 			try {
 				final URI umlUri = URI.createURI(catalog.resolveURI(UmlUtils.UML_IRI) + "." + OmlConstants.OML_EXTENSION);
