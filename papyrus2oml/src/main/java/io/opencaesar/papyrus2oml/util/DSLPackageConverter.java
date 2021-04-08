@@ -20,17 +20,17 @@ import io.opencaesar.papyrus2oml.converters.PackageConverter;
 
 public class DSLPackageConverter extends ResourceConverter {
 	
-	private String postFix = "";
 	public DSLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog,
 			OmlWriter writer, ResourceSet rs, ConversionType conversionType, Logger logger) {
 		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
 		context.rootPackage = rootPackage;
+		context.DSL =true;
 		logger.info("DLS converter in : " + (conversionType==ConversionType.DSL? " DSL mode" : "UML-DSL model"));
 		if (conversionType==ConversionType.UML_DSL) {
 			Model model = rootPackage.getModel();
 			EList<Profile> profiles = model.getAllAppliedProfiles();
 			// is it valid to just use the first ?
-			postFix = profiles.get(0).getLabel();
+			context.postFix = profiles.get(0).getLabel();
 		}
 		
 	}
@@ -57,9 +57,9 @@ public class DSLPackageConverter extends ResourceConverter {
 	@Override
 	public void convertEObject(EObject eObject) throws IOException {
 		if (eObject == context.rootPackage) {
-			PackageConverter.convertRootPackage(context.rootPackage,postFix, context);
+			PackageConverter.convertRootPackage(context.rootPackage,context.postFix, context);
 		} else if (eObject instanceof Package) {
-			PackageConverter.convertPackage((Package) eObject,postFix, context);
+			PackageConverter.convertPackage((Package) eObject,context.postFix, context);
 		} else if (eObject instanceof Element) {
 			NamedInstanceConverter.convert((Element) eObject, context);
 		} else {

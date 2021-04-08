@@ -41,13 +41,15 @@ public abstract class ResourceConverter {
 		public Map<Element, io.opencaesar.oml.IdentifiedElement> umlToOml = new HashMap<>();
 		private Vocabulary umlVoc;
 		public DescriptionBundle descriptionBundle;
-		public ConversionType conversionTYpe;
+		public ConversionType conversionType;
+		public String postFix = "";
+		public boolean DSL = false;
 
 		public ConversionContext(OmlCatalog cat, OmlWriter writer, ConversionType conversionType, Logger logger) {
 			this.catalog = cat;
 			this.writer = writer;
 			this.logger = logger;
-			this.conversionTYpe = conversionType;
+			this.conversionType = conversionType;
 		}
 		
 		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlWriter writer, ResourceSet rs, ConversionType conversionType, Logger logger) {

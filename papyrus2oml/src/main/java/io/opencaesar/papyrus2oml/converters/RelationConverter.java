@@ -19,8 +19,8 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.RelationEntity;
-import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.util.OmlRead;
+import io.opencaesar.papyrus2oml.ConversionType;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 import io.opencaesar.papyrus2oml.util.UmlUtils;
@@ -44,19 +44,33 @@ public class RelationConverter implements Runnable {
 	@Override
 	public void run() {
 		System.out.print(".");
-		List<String> sources = null;
-		List<String> targets = null;
-		if (element instanceof Association) {
-			sources = getAssociationEnds((Association)element, context, description, true);
-			targets = getAssociationEnds((Association)element, context, description, false);
-		}else {
-			String sourceName = getFeatureName(element, true, context);
-			String targetName = getFeatureName(element, false, context);
-			sources = extractValues(element, context, description, sourceName);
-			targets = extractValues(element, context, description, targetName);
+		String instanceIri= "";
+		Member instance = null;
+		if (context.conversionType!=ConversionType.UML_DSL || element instanceof Association) {
+			List<String> sources = null;
+			List<String> targets = null;
+			if (element instanceof Association) {
+				sources = getAssociationEnds((Association)element, context, description, true);
+				targets = getAssociationEnds((Association)element, context, description, false);
+			}else {
+				String sourceName = getFeatureName(element, true, context);
+				String targetName = getFeatureName(element, false, context);
+				sources = extractValues(element, context, description, sourceName);
+				targets = extractValues(element, context, description, targetName);
+			}
+			instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,targets);
+			instanceIri = OmlRead.getIri(instance);
+		}else if (!types.isEmpty()){
+			instanceIri = UmlUtils.getUMLIRI(element, context);
+			String ontIri = UmlUtils.getUMLONTIRI(element, context);
+			OMLUtil.addExtendsIfNeeded(description, ontIri, context.writer);
+			instance = OmlRead.getMemberByIri(description, instanceIri);
 		}
-		RelationInstance instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,targets);
-		String instanceIri = OmlRead.getIri(instance);
+		
+		if (instance==null || instanceIri.isEmpty()) {
+			System.out.println("error");
+		}
+
 		int index = 0;
 		for (Member t : types) {
 			context.writer.addRelationTypeAssertion(description, instanceIri, OmlRead.getIri(t));
