@@ -1,9 +1,9 @@
-ext.title = 'Papyrus'
-description = 'Papyrus Dependnecies'
+ext.title = 'Papyrus Dependencies'
+description = 'A library with minimal Papyrus dependnecies'
 
 dependencies {
 	compile fileTree(dir: 'libs', include: '*.jar')
-	implementation 'org.eclipse.emf:org.eclipse.emf.mapping.ecore2xml:2.11.0'
+	implementation "org.eclipse.emf:org.eclipse.emf.mapping.ecore2xml:${versions.ecore2xml}"
 }
 
 jar {

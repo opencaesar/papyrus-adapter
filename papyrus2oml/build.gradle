@@ -7,6 +7,13 @@ applicationName = 'papyrus2oml'
 
 dependencies {
 	implementation project (':papyrus-dependencies')
- 	implementation 'xml-resolver:xml-resolver:1.2'
+
+	implementation "com.beust:jcommander:${versions.jcommander}"
+	implementation "log4j:log4j:${versions.log4j}"
+	implementation "org.slf4j:slf4j-simple:${versions.slf4j}"
+	testImplementation "junit:junit:${versions.junit}"
+
+ 	implementation "xml-resolver:xml-resolver:${versions.xmlresolver}"
+	
     implementation "io.opencaesar.oml:io.opencaesar.oml.dsl:${versions.oml}"
 }

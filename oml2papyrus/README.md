@@ -1,5 +1,7 @@
 # Oml2Papyrus
 
+[![Release](https://img.shields.io/github/v/tag/opencaesar/papyrus-adapter?label=release)](https://github.com/opencaesar/papyrus-adapter/releases/latest)
+
 A tool that translates [OML](https://opencaesar.github.io/oml) ontologies to [Papyrus](https://www.eclipse.org/papyrus/) models
 
 ## Run as CLI
@@ -23,9 +25,7 @@ Args
 ```
 buildscript {
 	repositories {
-		mavenLocal()
-		maven { url 'https://dl.bintray.com/opencaesar/papyrus-adapter' }
-		jcenter()
+		mavenCentral()
 	}
 	dependencies {
 		classpath 'io.opencaesar.adapters:oml2papyrus-gradle:+'
