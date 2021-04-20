@@ -82,11 +82,10 @@ public class ConceptInstanceConverter {
 					if (feature instanceof EAttribute) {
 						for (Object value  : values) {
 							// TODO: handle structure
-							Literal literal = context.getLiteralValue(description, value);
-							context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+							addScalarProperty(description, context, instanceIri, propIRI, value);
 						}
 					}else if (!attrOnly) {
-						context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+						addLink(description, context, instanceIri, val, propIRI);
 					}
 				}
 			}else if (val!=null) {
@@ -96,14 +95,26 @@ public class ConceptInstanceConverter {
 					continue;
 				}
 				if (feature instanceof EAttribute) {
-					Literal literal = context.getLiteralValue(description, val);
-					context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+					addScalarProperty(description, context, instanceIri, propIRI, val);
 				}else if (!attrOnly) {
-					context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+					addLink(description, context, instanceIri, val, propIRI);
 				}
 			}
 			
 		}
+	}
+
+	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val,
+			String propIRI) {
+		context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+		String ontIRI = UmlUtils.getOntIRI(propIRI);
+		OMLUtil.addExtendsIfNeeded(description, ontIRI, context.writer);
+	}
+
+	private static void addScalarProperty(Description description, ConversionContext context, String instanceIri,
+			String propIRI, Object value) {
+		Literal literal = context.getLiteralValue(description, value);
+		context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
 	}
 	
 	static public String getIri(Property prop) {

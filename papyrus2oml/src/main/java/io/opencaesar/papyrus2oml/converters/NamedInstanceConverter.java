@@ -38,6 +38,7 @@ public class NamedInstanceConverter {
 			// which is mapped to a description bundle not a description
 			return;
 		}
+
 		ResourceSet rs = description.eResource().getResourceSet();
 		List<Member> types = new ArrayList<>();
 		List<Stereotype> stereotypes = element.getAppliedStereotypes();
@@ -63,7 +64,7 @@ public class NamedInstanceConverter {
 			}
 			types.add(type);
 		}
-
+				
 		Member type = types.stream().filter(t -> !(t instanceof Aspect)).findFirst().orElse(null);
 		if (type instanceof Concept) {
 			ConceptInstanceConverter.convert(element, description,stereotypes, types, context);

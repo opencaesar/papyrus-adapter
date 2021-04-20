@@ -1,11 +1,17 @@
 package io.opencaesar.oml2papyrus.util;
 
+import org.eclipse.emf.ecore.EAnnotation;
+import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
+import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.UMLFactory;
 import org.eclipse.uml2.uml.UMLPackage;
 
 public class UmlUtils {
+	
+	private static final String IRI_VALUE = "iri_value";
+	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
 	
 	public static String getUMLFirendlyName(String name) {
 		 char ch = name.charAt(0);
@@ -36,5 +42,12 @@ public class UmlUtils {
 			newPkg = ProfileUtils.createPackage(pkg, name, iri);
 		}
 		return newPkg;
+	}
+	
+	static public void setIRIAnnotation(Property umlProperty, String iri) {
+		EAnnotation annotatoin = EcoreFactory.eINSTANCE.createEAnnotation();
+		annotatoin.setSource(OMLIRI);
+		annotatoin.getDetails().put(IRI_VALUE, iri);
+		umlProperty.getEAnnotations().add(annotatoin);
 	}
 }

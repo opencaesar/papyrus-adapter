@@ -53,15 +53,15 @@ public class UMLPackageConverter extends ResourceConverter {
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package)eObject,context);
 		} else if (eObject instanceof Comment) {
-			// 
+			System.out.println("Not Converted : " + eObject.eClass().getName());
 		} else if (eObject instanceof ValueSpecification) {
-			// 
+			System.out.println("Not Converted : " + eObject.eClass().getName());
 		} else if (eObject instanceof Slot) {
-			// 
+			System.out.println("Not Converted : " + eObject.eClass().getName());
 		} else if (eObject instanceof ProfileApplication ||
 				  eObject instanceof PackageImport ||
 				  eObject instanceof ElementImport) {
-			// 
+			System.out.println("Not Converted : " + eObject.eClass().getName());
 		} else if (eObject instanceof Element) {
 			UMLNamedInstanceConverter.convert((Element)eObject,context);
 		} else {

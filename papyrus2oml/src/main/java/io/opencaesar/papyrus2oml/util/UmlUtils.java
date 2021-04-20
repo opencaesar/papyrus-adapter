@@ -99,5 +99,17 @@ public class UmlUtils {
 		}
 		return ns;
 	}
+	
+	public static String getOntIRI(String iri) {
+		int i = iri.lastIndexOf('#');
+		String baseIri;
+		if (i > 0) {
+			baseIri = iri.substring(0, i);			
+		} else {
+			i = iri.lastIndexOf('/');
+			baseIri = iri.substring(0, i);			
+		}
+		return baseIri;
+	}
 
 }

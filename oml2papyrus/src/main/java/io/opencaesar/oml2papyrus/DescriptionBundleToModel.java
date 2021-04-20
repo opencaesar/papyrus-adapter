@@ -335,6 +335,7 @@ public class DescriptionBundleToModel {
 				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
 				setFeatureValue(targetFeature,element,Collections.singletonList(target));
 			}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
+				System.out.println("Association");
 				setAssociationDetails((Association)element,Collections.singletonList(source), Collections.singletonList(target));
 			}
 			element.applyStereotype(stereotype);

@@ -46,7 +46,7 @@ public class RelationConverter implements Runnable {
 		System.out.print(".");
 		String instanceIri= "";
 		Member instance = null;
-		if (context.conversionType!=ConversionType.UML_DSL || element instanceof Association) {
+		if (context.conversionType!=ConversionType.UML_DSL) {
 			List<String> sources = null;
 			List<String> targets = null;
 			if (element instanceof Association) {
