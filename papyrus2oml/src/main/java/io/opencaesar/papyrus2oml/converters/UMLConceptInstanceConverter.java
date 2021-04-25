@@ -6,8 +6,6 @@ import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EReference;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Element;
-import org.eclipse.uml2.uml.Enumeration;
-import org.eclipse.uml2.uml.EnumerationLiteral;
 import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.xtext.xbase.lib.StringExtensions;
 

@@ -6,15 +6,9 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.Element;
-import org.eclipse.uml2.uml.ElementImport;
 import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
-import org.eclipse.uml2.uml.PackageImport;
-import org.eclipse.uml2.uml.ProfileApplication;
-import org.eclipse.uml2.uml.Slot;
-import org.eclipse.uml2.uml.ValueSpecification;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
