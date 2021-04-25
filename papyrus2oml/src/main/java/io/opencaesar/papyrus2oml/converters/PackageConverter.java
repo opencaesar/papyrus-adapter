@@ -46,10 +46,10 @@ public class PackageConverter {
 		final String prefix = package_.getName();
 		String iri = UmlUtils.getIRI(package_);
 		boolean empty = package_.getPackagedElements().stream().filter(e -> !(e instanceof Package)).count() == 0;
-		String calcuatedPostFix = (postFix.isEmpty() || context.conversionType == ConversionType.UML_DSL) ? "" : ("-" + postFix);
+		String calcuatedPostFix = (postFix.isEmpty() || context.conversionType == ConversionType.uml_dsl) ? "" : ("-" + postFix);
 		iri = empty ? iri + calcuatedPostFix : iri + "-bundle";
 		final URI uri = URI.createURI(context.catalog.resolveURI(iri) +   "." + OmlConstants.OML_EXTENSION);
-		if (context.conversionType != ConversionType.UML_DSL || context.DSL) {
+		if (context.conversionType != ConversionType.uml_dsl || context.DSL) {
 			DescriptionBundle bundle = context.writer.createDescriptionBundle(uri, iri, SeparatorKind.HASH, prefix + calcuatedPostFix);
 			context.descriptionBundle = bundle;
 		}

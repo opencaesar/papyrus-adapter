@@ -9,6 +9,7 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.ElementImport;
+import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageImport;
 import org.eclipse.uml2.uml.ProfileApplication;
@@ -26,7 +27,7 @@ public class UMLPackageConverter extends ResourceConverter {
 	public UMLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, ConversionType conversionType, Logger logger) {
 		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, omlResourceSet,conversionType, logger));
 		context.rootPackage = rootPackage;
-		logger.info("UML converter in : " + (conversionType==ConversionType.UML? " UML mode" : "UML-DSL model"));
+		logger.info("UML converter in : " + (conversionType==ConversionType.uml? " UML mode" : "UML-DSL model"));
 	}
 	
 	@Override
@@ -52,19 +53,9 @@ public class UMLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package)eObject,context);
-		} else if (eObject instanceof Comment) {
-			System.out.println("Not Converted : " + eObject.eClass().getName());
-		} else if (eObject instanceof ValueSpecification) {
-			System.out.println("Not Converted : " + eObject.eClass().getName());
-		} else if (eObject instanceof Slot) {
-			System.out.println("Not Converted : " + eObject.eClass().getName());
-		} else if (eObject instanceof ProfileApplication ||
-				  eObject instanceof PackageImport ||
-				  eObject instanceof ElementImport) {
-			System.out.println("Not Converted : " + eObject.eClass().getName());
-		} else if (eObject instanceof Element) {
-			UMLNamedInstanceConverter.convert((Element)eObject,context);
-		} else {
+		} else if (eObject instanceof NamedElement) {
+			UMLNamedInstanceConverter.convert((NamedElement)eObject,context);
+		} else if (!(eObject instanceof Element)) {
 			System.out.println("Not Converted : " + eObject.eClass().getName());
 		}
 	}

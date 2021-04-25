@@ -9,6 +9,7 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Model;
+import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Profile;
 
@@ -25,8 +26,8 @@ public class DSLPackageConverter extends ResourceConverter {
 		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
 		context.rootPackage = rootPackage;
 		context.DSL =true;
-		logger.info("DLS converter in : " + (conversionType==ConversionType.DSL? " DSL mode" : "UML-DSL model"));
-		if (conversionType==ConversionType.UML_DSL) {
+		logger.info("DLS converter in : " + (conversionType==ConversionType.dsl? " DSL mode" : "UML-DSL model"));
+		if (conversionType==ConversionType.uml_dsl) {
 			Model model = rootPackage.getModel();
 			EList<Profile> profiles = model.getAllAppliedProfiles();
 			// is it valid to just use the first ?
@@ -60,9 +61,9 @@ public class DSLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage,context.postFix, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package) eObject,context.postFix, context);
-		} else if (eObject instanceof Element) {
-			NamedInstanceConverter.convert((Element) eObject, context);
-		} else {
+		} else if (eObject instanceof NamedElement) {
+			NamedInstanceConverter.convert((NamedElement) eObject, context);
+		} else if (!(eObject instanceof Element)) {
 			System.out.println("Not Converted : " + eObject.eClass().getName());
 		}
 	}

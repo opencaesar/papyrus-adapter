@@ -19,6 +19,7 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 
 import com.beust.jcommander.IParameterValidator;
+import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
@@ -60,17 +61,17 @@ public class Papyrus2OmlApp {
 			required=false, 
 			order=3
 	)
-	
 	private List<String> ignoredIriPrefixes = null;
 	
 	
 	@Parameter(
 			names= {"--conversion-type","-c"}, 
-			description="Prefixes of IRIs to ignore converting (Optional)",
+			description="Conversion type: uml, dsl, or uml_dsl (Optional)",
+			converter = TypeConverter.class,
 			required=false, 
 			order=4
 	)
-	private String conv_type_str = "UML";
+	private ConversionType conversionType = ConversionType.uml;
 	
 	@Parameter(
 		names= {"--debug", "-d"}, 
@@ -136,24 +137,6 @@ public class Papyrus2OmlApp {
 		final OmlWriter writer = new OmlWriter(omlResourceSet);
 		writer.start();
 				
-		ConversionType conversionType = ConversionType.UML;
-		switch (conv_type_str) {
-		case "UML":
-		case "uml":
-			conversionType = ConversionType.UML;
-			break;
-		case "DSL":
-		case "dsl":
-			conversionType = ConversionType.DSL;
-			break;
-		case "DSL-UML":
-		case "dsl-uml":
-		case "UML-DSL":
-		case "uml-dsl":
-			conversionType = ConversionType.UML_DSL;
-			break;
-			
-		}
 		// Convert the input model to OML resources
 		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet,conversionType, LOGGER);
 		omlResources.addAll(converter.convert());
@@ -192,17 +175,7 @@ public class Papyrus2OmlApp {
 		return version;
 	}
 
-	static public class InputFolderPath implements IParameterValidator {
-		@Override
-		public void validate(String name, String value) throws ParameterException {
-			final File directory = new File(value);
-			if (!directory.isDirectory()) {
-				throw new ParameterException("Argument " + value + " should be a valid folder path");
-			}
-	  	}
-	}
-
-	static public class InputFilePath implements IParameterValidator {
+	public static class InputFilePath implements IParameterValidator {
 		@Override
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
@@ -214,13 +187,21 @@ public class Papyrus2OmlApp {
 	  	}
 	}
 
-	static public class CatalogPath implements IParameterValidator {
+	public static class CatalogPath implements IParameterValidator {
 		@Override
 		public void validate(String name, String value) throws ParameterException {
 			final File file = new File(value);
 			if (!file.getName().endsWith("catalog.xml")) {
 				throw new ParameterException("Argument " + value + " should be a valid OML catalog path");
 			}
+		}
+		
+	}
+
+	public static class TypeConverter implements IStringConverter<ConversionType> {
+		@Override
+		public ConversionType convert(String value) {
+			return ConversionType.valueOf(value);
 		}
 		
 	}

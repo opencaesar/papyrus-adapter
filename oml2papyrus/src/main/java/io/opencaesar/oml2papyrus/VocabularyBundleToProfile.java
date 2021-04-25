@@ -22,6 +22,7 @@ import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.DataType;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Enumeration;
+import org.eclipse.uml2.uml.EnumerationLiteral;
 import org.eclipse.uml2.uml.Generalization;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
@@ -250,7 +251,8 @@ public class VocabularyBundleToProfile {
 		logger.debug("Converting : " + entity.getName());
 		StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
 
-		Stereotype stereotype = ProfileUtils.createStereotype(pkg, UmlUtils.getUMLFirendlyName(entity.getName()), entity instanceof Aspect, infoHolder.metaClasses);
+		Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(), entity instanceof Aspect, infoHolder.metaClasses);
+		UmlUtils.addNameAnnotationIfNeeded(stereotype);
 		converted.put(entity, stereotype);
 		logger.debug("Stereotype " + stereotype.getName() + " was created");
 		
@@ -280,15 +282,16 @@ public class VocabularyBundleToProfile {
 		if (converted.containsKey(enumType)) {
 			return;
 		}
-		String name = UmlUtils.getUMLFirendlyName(enumType.getName());
 		EList<Literal> literals = enumType.getLiterals();
-		logger.debug("Enum : " + name);
-		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
+		final Enumeration umlEnum = pkg.createOwnedEnumeration(enumType.getName());
+		UmlUtils.addNameAnnotationIfNeeded(umlEnum);
+		logger.debug("Enum : " + umlEnum.getName());
 
 		convertAnnotations(umlEnum, enumType);
 
 		literals.forEach(literal -> {
-			umlEnum.createOwnedLiteral(UmlUtils.getUMLFirendlyName(OmlRead.getLexicalValue(literal)));
+			EnumerationLiteral umlLiteral = umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
+			UmlUtils.addNameAnnotationIfNeeded(umlLiteral);
 		});
 
 		converted.put(enumType, umlEnum);
@@ -322,9 +325,10 @@ public class VocabularyBundleToProfile {
 		Classifier classifier = converted.get(entity);
 		DataType rangeClass = getTypeForRange(range);
 		if (classifier instanceof Class) {
-			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
+			Property umlProperty = ((Class)classifier).createOwnedAttribute(prop.getName(), rangeClass);
+			UmlUtils.addNameAnnotationIfNeeded(umlProperty);
 			String iri = OmlRead.getIri(prop);
-			UmlUtils.setIRIAnnotation(umlProperty, iri);
+			UmlUtils.addIRIAnnotation(umlProperty, iri);
 			convertAnnotations(umlProperty, prop);
 			umlProperty.setLower(lower);
 			umlProperty.setUpper(upper);
@@ -354,7 +358,7 @@ public class VocabularyBundleToProfile {
 				Class srcClass = (Class) converted.get(src);
 				Class trgClass = (Class) converted.get(trgt);
 				boolean isFunctional = entity.isFunctional();
-				String end1Name = UmlUtils.getUMLFirendlyName(srcRel.getName());
+				String end1Name = srcRel.getName();
 				boolean end1Navigable = true;
 				String end2Name = "";
 				boolean end2Navigable = false;
@@ -381,7 +385,7 @@ public class VocabularyBundleToProfile {
 				}
 				if (trgRel != null) {
 					// match with the range
-					end2Name = UmlUtils.getUMLFirendlyName(trgRel.getName());
+					end2Name = trgRel.getName();
 					end2Navigable = true;
 					List<RelationRestrictionAxiom> trgtCard = OmlSearch.findRelationRestrictionAxiomsWithRelation(trgRel);
 					for (RelationRestrictionAxiom axiom : trgtCard) {
@@ -552,11 +556,13 @@ public class VocabularyBundleToProfile {
 				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
 		if (!srcRelationIri.isBlank() && end1Navigable) {
 			Property att1 = srcClass.getAttribute(end1Name, trgClass);
-			UmlUtils.setIRIAnnotation(att1, srcRelationIri);
+			UmlUtils.addNameAnnotationIfNeeded(att1);
+			UmlUtils.addIRIAnnotation(att1, srcRelationIri);
 		}
 		if (!targetRelationIri.isBlank() && end2Navigable) {
 			Property att2 = trgClass.getAttribute(end2Name, srcClass);
-			UmlUtils.setIRIAnnotation(att2, targetRelationIri);
+			UmlUtils.addNameAnnotationIfNeeded(att2);
+			UmlUtils.addIRIAnnotation(att2, targetRelationIri);
 		}
 		createdAssociations.add(key);
 		// reverse Key

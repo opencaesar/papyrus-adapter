@@ -163,19 +163,19 @@ public class DescriptionBundleToModel {
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public EObject convertScalarPropertyValueAssertion(ScalarPropertyValueAssertion object) {
+		Instance instance = OmlRead.getInstance(object);
+		ScalarProperty property = object.getProperty();
 		Object value = OmlSearch.findJavaValue(object.getValue());
 		if (object.getProperty().getRange() instanceof EnumeratedScalar) {
 			value = UmlUtils.getUMLFirendlyName(value.toString()); 
 		}
-		ScalarProperty property = object.getProperty();
-		Instance instance = OmlRead.getInstance(object);
 		if (instance instanceof NamedInstance) {
 			Element element = (Element) oml2EcoreMap.get(instance);
-			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(object.getProperty().getDomain()));
+			Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(property.getDomain()));
 			List<Stereotype> stereotypes = element.getAppliedSubstereotypes(stereotype);
 			for (Stereotype s : stereotypes) {
 				// check for many
-				Object val = element.getValue(s,UmlUtils.getUMLFirendlyName(property.getName()));
+				Object val = element.getValue(s, UmlUtils.getUMLFirendlyName(property.getName()));
 				if (val instanceof List) {
 					//ugly
 					((List)val).add(value);
@@ -212,10 +212,11 @@ public class DescriptionBundleToModel {
 		if (metaclasses.isEmpty()) {
 			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" does not extend any metaclass");
 		}
-		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
+		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
 		
 		PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
-		element.setName(UmlUtils.getUMLFirendlyName(object.getName()));
+		element.setName(object.getName());
+		UmlUtils.addNameAnnotationIfNeeded(element);
 		oml2EcoreMap.put(object, element);
 		List<NamedElement> sources = object.getSources().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
 		List<NamedElement> targets = object.getTargets().stream().map(s -> (NamedElement) oml2EcoreMap.get(s)).collect(Collectors.toList());
@@ -311,7 +312,7 @@ public class DescriptionBundleToModel {
 		}
 		
 		// reified flow should be triggered if the reified flag is ON
-		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(UmlUtils.getUMLFirendlyName(metaclasses.get(0).getName()));
+		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
 		
 		NamedElement source = (NamedElement) oml2EcoreMap.get(OmlRead.getSource(object));
 		NamedElement target = (NamedElement) oml2EcoreMap.get(object.getTarget());
@@ -453,7 +454,7 @@ public class DescriptionBundleToModel {
 				List<Stereotype> stereotypes = element.getAppliedSubstereotypes(stereotype);
 				for (Stereotype s : stereotypes) {
 					// check for many
-					Object val = element.getValue(s,UmlUtils.getUMLFirendlyName(property.getName()));
+					Object val = element.getValue(s, UmlUtils.getUMLFirendlyName(property.getName()));
 					if (val instanceof List) {
 						//ugly
 						((List)val).add(value);

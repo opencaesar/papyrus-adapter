@@ -8,6 +8,7 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -30,7 +31,7 @@ public class UMLNamedInstanceConverter {
 	private static final String CONCEPT_POSTFIX = "_concept";
 	private static final String RELATION_POSTFIX = "_relation";
 	
-	static public void convert(Element element, ConversionContext context) throws IOException {
+	static public void convert(NamedElement element, ConversionContext context) throws IOException {
 		String name = UmlUtils.getName(element);
 		if (name != null && !name.isEmpty()) {
 			Description description = (Description) context.umlToOml.get(element.getNearestPackage());
@@ -42,7 +43,7 @@ public class UMLNamedInstanceConverter {
 				context.deferred.add(new UMLRelationConverter(element,(RelationEntity) type, description, context));
 			} else if (type instanceof Aspect){
 				/// UML_DSL and stereo typed => relation
-				if (context.conversionType == ConversionType.UML_DSL && 
+				if (context.conversionType == ConversionType.uml_dsl && 
 					shouldCreateRelation(element, description,rs, context)) {
 					Member relType = context.getUmlOmlElementByName(element.eClass().getName() + RELATION_POSTFIX);
 					Ontology ont = OmlRead.getOntology(relType);
@@ -60,7 +61,7 @@ public class UMLNamedInstanceConverter {
 		}
 	}
 
-	private static void createCooncept(Element element, ConversionContext context) {
+	private static void createCooncept(NamedElement element, ConversionContext context) {
 		Member conceptType = context.getUmlOmlElementByName(element.eClass().getName() + CONCEPT_POSTFIX);
 		UMLConceptInstanceConverter.convert(element, conceptType, context);
 	}

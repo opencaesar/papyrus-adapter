@@ -81,7 +81,7 @@ public abstract class ResourceConverter {
 			if (val instanceof Integer) {
 				return writer.createIntegerLiteral(description, (int)val);
 			} else if (val instanceof Double) {
-				return writer.createDoubleLiteral(description, (double)val);
+				return writer.createQuotedLiteral(description, val.toString(), OmlConstants.XSD_NS+"double", null);
 			} else if (val instanceof Boolean) {
 				return writer.createBooleanLiteral(description, (boolean)val);
 			} else if (val instanceof EEnumLiteral) {

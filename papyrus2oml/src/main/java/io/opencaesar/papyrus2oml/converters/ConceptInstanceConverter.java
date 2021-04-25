@@ -3,12 +3,13 @@ package io.opencaesar.papyrus2oml.converters;
 import java.util.List;
 
 import org.eclipse.emf.common.util.EList;
-import org.eclipse.emf.ecore.EAnnotation;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.Enumeration;
+import org.eclipse.uml2.uml.EnumerationLiteral;
+import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -23,14 +24,11 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class ConceptInstanceConverter {
 	
-	private static final String IRI_VALUE = "iri_value";
-	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
-
-	static public void convert(Element element, Description description, List<Stereotype> stereotypes, List<Member> types,
+	static public void convert(NamedElement element, Description description, List<Stereotype> stereotypes, List<Member> types,
 			ConversionContext context) {
 		String instanceIri = UmlUtils.getIRI(description, element);
 		Member instance = null;
-		if (context.conversionType==ConversionType.DSL) {
+		if (context.conversionType==ConversionType.dsl) {
 			instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
 		}else if (!types.isEmpty() || !stereotypes.isEmpty()){
 			instanceIri = UmlUtils.getUMLIRI(element, context);
@@ -74,29 +72,34 @@ public class ConceptInstanceConverter {
 			if (prop.isMultivalued()) {
 				EList<?> values = (EList<?>) val;
 				if (!values.isEmpty()) {
-					String propIRI = getIri(prop);
+					String propIRI = UmlUtils.getIri(prop);
 					if (propIRI.isEmpty()) {
 						context.logger.error("Could not get IRI for " + prop.getName());
 						continue;
 					}
 					if (feature instanceof EAttribute) {
 						for (Object value  : values) {
-							// TODO: handle structure
+							if (prop.getType() instanceof Enumeration) {
+								Enumeration _enum = (Enumeration) prop.getType();
+								EnumerationLiteral literal = _enum.getOwnedLiteral(value.toString());
+								value = UmlUtils.getOmlName(literal);
+							}
 							addScalarProperty(description, context, instanceIri, propIRI, value);
+							// TODO: handle structure
 						}
-					}else if (!attrOnly) {
+					} else if (!attrOnly) {
 						addLink(description, context, instanceIri, val, propIRI);
 					}
 				}
-			}else if (val!=null) {
-				String propIRI = getIri(prop);
+			} else if (val!=null) {
+				String propIRI = UmlUtils.getIri(prop);
 				if (propIRI.isEmpty()) {
 					context.logger.error("Could not get IRI for " + prop.getName());
 					continue;
 				}
 				if (feature instanceof EAttribute) {
 					addScalarProperty(description, context, instanceIri, propIRI, val);
-				}else if (!attrOnly) {
+				} else if (!attrOnly) {
 					addLink(description, context, instanceIri, val, propIRI);
 				}
 			}
@@ -104,11 +107,10 @@ public class ConceptInstanceConverter {
 		}
 	}
 
-	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val,
-			String propIRI) {
+	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val, String propIRI) {
 		context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
 		String ontIRI = UmlUtils.getOntIRI(propIRI);
-		OMLUtil.addExtendsIfNeeded(description, ontIRI, context.writer);
+		OMLUtil.addUsesIfNeeded(description, ontIRI, context.writer);
 	}
 
 	private static void addScalarProperty(Description description, ConversionContext context, String instanceIri,
@@ -117,11 +119,4 @@ public class ConceptInstanceConverter {
 		context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
 	}
 	
-	static public String getIri(Property prop) {
-		EAnnotation annotation = prop.getEAnnotation(OMLIRI);
-		if (annotation!=null) {
-			return annotation.getDetails().get(IRI_VALUE);
-		}
-		return "";
-	}
 }

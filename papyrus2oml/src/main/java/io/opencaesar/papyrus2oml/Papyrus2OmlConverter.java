@@ -25,7 +25,7 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 	
 	private ResourceSet rs;
 	private List<String> ignoredIriPrefixes;
-	private ConversionType conversionType = ConversionType.UML;
+	private ConversionType conversionType = ConversionType.uml;
 
 	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, ConversionType conversionType, Logger logger) {
 		super(inputModelFile, catalog, writer, logger);
@@ -49,10 +49,10 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 			if (root instanceof Profile) {
 				converters.add(new ProfileConverter((Profile)root, catalog, writer,conversionType, logger));
 			} else if (root instanceof Package) {
-				if (conversionType == ConversionType.UML || conversionType == ConversionType.UML_DSL) {
+				if (conversionType == ConversionType.uml || conversionType == ConversionType.uml_dsl) {
 					converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
 				}
-				if (conversionType == ConversionType.DSL || conversionType == ConversionType.UML_DSL) {
+				if (conversionType == ConversionType.dsl || conversionType == ConversionType.uml_dsl) {
 					converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
 				}
 			}
