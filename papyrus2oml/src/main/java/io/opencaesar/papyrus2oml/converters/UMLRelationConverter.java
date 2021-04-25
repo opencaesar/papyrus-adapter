@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.NamedElement;
 
 import io.opencaesar.oml.Description;
@@ -22,12 +23,12 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLRelationConverter implements Runnable {
 
-	NamedElement element;
+	Element element;
 	private RelationEntity type;
 	private ConversionContext context;
 	private Description description;
 
-	public UMLRelationConverter(NamedElement element, RelationEntity type,Description description, ConversionContext context) {
+	public UMLRelationConverter(Element element, RelationEntity type,Description description, ConversionContext context) {
 		this.element = element;
 		this.type = type;
 		this.context = context;
@@ -39,7 +40,7 @@ public class UMLRelationConverter implements Runnable {
 		createInstance((RelationEntity) type,element,context,description);
 	}
 	
-	private static RelationInstance createInstance(RelationEntity type, NamedElement element,ConversionContext context, Description description) {
+	private static RelationInstance createInstance(RelationEntity type, Element element,ConversionContext context, Description description) {
 		RelationEntity entity = (RelationEntity) type;
 		SourceRelation sourceR = entity.getSourceRelation();
 		while (sourceR == null && !entity.getOwnedSpecializations().isEmpty()) {
@@ -74,7 +75,7 @@ public class UMLRelationConverter implements Runnable {
 		return instance;
 	}
 
-	private static List<String> convertElements(NamedElement element, ConversionContext context, Description description,
+	private static List<String> convertElements(Element element, ConversionContext context, Description description,
 			Member sourceR) {
 		List<String> elements = new ArrayList<>();
 		if (sourceR != null) {

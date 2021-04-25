@@ -42,14 +42,14 @@ public class UmlUtils {
 		return iri;
 	}
 	
-	public static String getIRI(NamedElement element, ConversionContext context) {
+	public static String getIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
 		IdentifiedElement oPkg = context.umlToOml.get(pkg);
 		Ontology ontology = OmlRead.getOntology(oPkg);
 		return OmlRead.getNamespace(ontology) + UmlUtils.getName(element);
 	}
 	
-	public static String getIRI(Description description, NamedElement element) {
+	public static String getIRI(Description description, Element element) {
 		return OmlRead.getNamespace(description) + UmlUtils.getName(element);
 	}
 	
@@ -71,9 +71,11 @@ public class UmlUtils {
 		return name !=null ? name : element.getName();
 	}
 
-	private static void getQualifiedNames(NamedElement element, List<String> names) {
-		String name = getOmlName(element);
-		
+	private static void getQualifiedNames(Element element, List<String> names) {
+		String name = null;
+		if (element instanceof NamedElement) {
+			name = ((NamedElement)element).getName();
+		}		
 		if (name==null || name.isEmpty()) {
 			name = _getID(element);
 			names.add(name);
@@ -81,12 +83,12 @@ public class UmlUtils {
 			name = name.replaceAll("&", "_"); // TODO: replace other unexpected chars
 			if (!(element instanceof Package)) {
 				names.add(name);
-				getQualifiedNames((NamedElement)element.getOwner(), names);
+				getQualifiedNames(element.getOwner(), names);
 			}
 		}
 	}
 	
-	public static String getName(NamedElement element) {
+	public static String getName(Element element) {
 		List<String> names = new ArrayList<>();
 		getQualifiedNames(element, names);
 		StringBuilder qName = new StringBuilder();
@@ -97,7 +99,7 @@ public class UmlUtils {
 		return qName.toString();
 	}
 
-	public static String getUMLIRI(NamedElement element, ConversionContext context) {
+	public static String getUMLIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
 		IdentifiedElement oPkg = context.umlToOml.get(pkg);
 		Ontology ontology = OmlRead.getOntology(oPkg);

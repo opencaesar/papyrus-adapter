@@ -8,7 +8,6 @@ import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
-import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -31,10 +30,13 @@ public class UMLNamedInstanceConverter {
 	private static final String CONCEPT_POSTFIX = "_concept";
 	private static final String RELATION_POSTFIX = "_relation";
 	
-	static public void convert(NamedElement element, ConversionContext context) throws IOException {
+	static public void convert(Element element, ConversionContext context) throws IOException {
 		String name = UmlUtils.getName(element);
 		if (name != null && !name.isEmpty()) {
 			Description description = (Description) context.umlToOml.get(element.getNearestPackage());
+			if (description == null) {
+				return;// parent package was not mapped
+			}
 			ResourceSet rs = description.eResource().getResourceSet();
 			Member type = context.getUmlOmlElementByName(element.eClass().getName());
 			if (type instanceof Concept) {
@@ -61,7 +63,7 @@ public class UMLNamedInstanceConverter {
 		}
 	}
 
-	private static void createCooncept(NamedElement element, ConversionContext context) {
+	private static void createCooncept(Element element, ConversionContext context) {
 		Member conceptType = context.getUmlOmlElementByName(element.eClass().getName() + CONCEPT_POSTFIX);
 		UMLConceptInstanceConverter.convert(element, conceptType, context);
 	}

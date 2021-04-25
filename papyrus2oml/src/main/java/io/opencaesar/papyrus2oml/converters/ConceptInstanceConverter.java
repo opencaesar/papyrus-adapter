@@ -7,9 +7,9 @@ import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Enumeration;
 import org.eclipse.uml2.uml.EnumerationLiteral;
-import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -24,7 +24,7 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class ConceptInstanceConverter {
 	
-	static public void convert(NamedElement element, Description description, List<Stereotype> stereotypes, List<Member> types,
+	static public void convert(Element element, Description description, List<Stereotype> stereotypes, List<Member> types,
 			ConversionContext context) {
 		String instanceIri = UmlUtils.getIRI(description, element);
 		Member instance = null;

@@ -7,9 +7,11 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
+import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.resources.util.UMLResourcesUtil;
@@ -53,7 +55,12 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 					converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
 				}
 				if (conversionType == ConversionType.dsl || conversionType == ConversionType.uml_dsl) {
-					converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
+					Package rootPackage = (Package) root; 
+					Model model = rootPackage.getModel();
+					EList<Profile> profiles = model.getAllAppliedProfiles();
+					if (!profiles.isEmpty()) {
+						converters.add(new DSLPackageConverter(rootPackage, profiles.get(0), ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
+					}
 				}
 			}
 		}

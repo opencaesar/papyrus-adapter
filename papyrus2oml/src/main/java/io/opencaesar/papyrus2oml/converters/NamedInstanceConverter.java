@@ -7,7 +7,7 @@ import java.util.List;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.uml2.uml.NamedElement;
+import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Stereotype;
 
@@ -25,7 +25,7 @@ import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class NamedInstanceConverter {
 
-	static public void convert(NamedElement element, ConversionContext context) throws IOException {
+	static public void convert(Element element, ConversionContext context) throws IOException {
 		String name =  UmlUtils.getName(element);
 		if (name == null || name.isEmpty()) {
 			// Notice that some relations in UML could be anonymous

@@ -11,7 +11,6 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Association;
 import org.eclipse.uml2.uml.Element;
-import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.Type;
@@ -27,13 +26,13 @@ import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class RelationConverter implements Runnable {
-	private NamedElement element;
+	private Element element;
 	private ConversionContext context;
 	private Description description;
 	List<Member> types;
 	List<Stereotype> stereotypes;
 
-	public RelationConverter(Description description, NamedElement element, ConversionContext context, List<Member> types,
+	public RelationConverter(Description description, Element element, ConversionContext context, List<Member> types,
 			List<Stereotype> stereotypes) {
 		this.element = element;
 		this.context = context;
