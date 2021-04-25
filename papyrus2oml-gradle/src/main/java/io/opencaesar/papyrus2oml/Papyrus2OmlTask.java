@@ -15,6 +15,8 @@ public class Papyrus2OmlTask extends DefaultTask {
 	
 	public List<String> ignoredIriPrefixes;
 
+	public String conversionType;
+	
 	public boolean debug;
 
     @TaskAction
@@ -33,6 +35,10 @@ public class Papyrus2OmlTask extends DefaultTask {
 			    args.add("-p");
 			    args.add(p);
 	        }
+        }
+        if (conversionType != null) {
+		    args.add("-c");
+		    args.add(conversionType);
         }
 	    if (debug) {
 		    args.add("-d");

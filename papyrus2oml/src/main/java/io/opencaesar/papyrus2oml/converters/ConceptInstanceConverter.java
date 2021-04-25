@@ -3,42 +3,52 @@ package io.opencaesar.papyrus2oml.converters;
 import java.util.List;
 
 import org.eclipse.emf.common.util.EList;
-import org.eclipse.emf.ecore.EAnnotation;
 import org.eclipse.emf.ecore.EAttribute;
 import org.eclipse.emf.ecore.EClass;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
-import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.Enumeration;
+import org.eclipse.uml2.uml.EnumerationLiteral;
+import org.eclipse.uml2.uml.NamedElement;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 
-import io.opencaesar.oml.ConceptInstance;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.util.OmlRead;
-import io.opencaesar.papyrus2oml.util.UmlUtils;
+import io.opencaesar.papyrus2oml.ConversionType;
+import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
+import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class ConceptInstanceConverter {
 	
-	private static final String IRI_VALUE = "iri_value";
-	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
-
-	static public void convert(Element element, Description description, List<Stereotype> stereotypes, List<Member> types,
+	static public void convert(NamedElement element, Description description, List<Stereotype> stereotypes, List<Member> types,
 			ConversionContext context) {
-		ConceptInstance instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
-		context.umlToOml.put(element, instance);
-		String instanceIri = OmlRead.getIri(instance);
-		for (Member t : types) {
-			context.writer.addConceptTypeAssertion(description, instanceIri, OmlRead.getIri(t));
+		String instanceIri = UmlUtils.getIRI(description, element);
+		Member instance = null;
+		if (context.conversionType==ConversionType.dsl) {
+			instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
+		}else if (!types.isEmpty() || !stereotypes.isEmpty()){
+			instanceIri = UmlUtils.getUMLIRI(element, context);
+			String ontIri = UmlUtils.getUMLONTIRI(element, context);
+			OMLUtil.addExtendsIfNeeded(description, ontIri, context.writer);
+			instance = OmlRead.getMemberByIri(description, instanceIri);
 		}
-	
-		// get the stereoType applications
-		for (Stereotype stereoType : stereotypes) {
-			EObject stApplication = element.getStereotypeApplication(stereoType);
-			EClass eClass = stApplication.eClass();
-			createAttributesAndReferences(description, context, instanceIri, stereoType, stApplication, eClass,false);
+		
+		if (instance!=null) {
+			context.umlToOml.put(element, instance);
+			for (Member t : types) {
+				context.writer.addConceptTypeAssertion(description, instanceIri, OmlRead.getIri(t));
+			}
+		
+			// get the stereoType applications
+			for (Stereotype stereoType : stereotypes) {
+				EObject stApplication = element.getStereotypeApplication(stereoType);
+				EClass eClass = stApplication.eClass();
+				createAttributesAndReferences(description, context, instanceIri, stereoType, stApplication, eClass,false);
+			}
 		}
 	}
 	
@@ -62,43 +72,51 @@ public class ConceptInstanceConverter {
 			if (prop.isMultivalued()) {
 				EList<?> values = (EList<?>) val;
 				if (!values.isEmpty()) {
-					String propIRI = getIri(prop);
+					String propIRI = UmlUtils.getIri(prop);
 					if (propIRI.isEmpty()) {
 						context.logger.error("Could not get IRI for " + prop.getName());
 						continue;
 					}
 					if (feature instanceof EAttribute) {
 						for (Object value  : values) {
+							if (prop.getType() instanceof Enumeration) {
+								Enumeration _enum = (Enumeration) prop.getType();
+								EnumerationLiteral literal = _enum.getOwnedLiteral(value.toString());
+								value = UmlUtils.getOmlName(literal);
+							}
+							addScalarProperty(description, context, instanceIri, propIRI, value);
 							// TODO: handle structure
-							Literal literal = context.getLiteralValue(description, value);
-							context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
 						}
-					}else if (!attrOnly) {
-						context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+					} else if (!attrOnly) {
+						addLink(description, context, instanceIri, val, propIRI);
 					}
 				}
-			}else if (val!=null) {
-				String propIRI = getIri(prop);
+			} else if (val!=null) {
+				String propIRI = UmlUtils.getIri(prop);
 				if (propIRI.isEmpty()) {
 					context.logger.error("Could not get IRI for " + prop.getName());
 					continue;
 				}
 				if (feature instanceof EAttribute) {
-					Literal literal = context.getLiteralValue(description, val);
-					context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
-				}else if (!attrOnly) {
-					context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+					addScalarProperty(description, context, instanceIri, propIRI, val);
+				} else if (!attrOnly) {
+					addLink(description, context, instanceIri, val, propIRI);
 				}
 			}
 			
 		}
 	}
-	
-	static public String getIri(Property prop) {
-		EAnnotation annotation = prop.getEAnnotation(OMLIRI);
-		if (annotation!=null) {
-			return annotation.getDetails().get(IRI_VALUE);
-		}
-		return "";
+
+	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val, String propIRI) {
+		context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+		String ontIRI = UmlUtils.getOntIRI(propIRI);
+		OMLUtil.addUsesIfNeeded(description, ontIRI, context.writer);
 	}
+
+	private static void addScalarProperty(Description description, ConversionContext context, String instanceIri,
+			String propIRI, Object value) {
+		Literal literal = context.getLiteralValue(description, value);
+		context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+	}
+	
 }

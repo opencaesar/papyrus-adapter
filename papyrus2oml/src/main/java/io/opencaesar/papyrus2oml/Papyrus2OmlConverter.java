@@ -25,11 +25,13 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 	
 	private ResourceSet rs;
 	private List<String> ignoredIriPrefixes;
+	private ConversionType conversionType = ConversionType.uml;
 
-	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, Logger logger) {
+	public Papyrus2OmlConverter(File inputModelFile, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, ConversionType conversionType, Logger logger) {
 		super(inputModelFile, catalog, writer, logger);
 		this.rs = omlResourceSet;
 		this.ignoredIriPrefixes = ignoredIriPrefixes;
+		this.conversionType = conversionType;
 	}
 
 	@Override
@@ -45,10 +47,14 @@ public class Papyrus2OmlConverter extends Ecore2OmlConverter {
 		if (!resource.getContents().isEmpty()) {
 			EObject root = resource.getContents().get(0);
 			if (root instanceof Profile) {
-				converters.add(new ProfileConverter((Profile)root, catalog, writer, logger));
+				converters.add(new ProfileConverter((Profile)root, catalog, writer,conversionType, logger));
 			} else if (root instanceof Package) {
-				//converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
-				converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs, logger));
+				if (conversionType == ConversionType.uml || conversionType == ConversionType.uml_dsl) {
+					converters.add(new UMLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
+				}
+				if (conversionType == ConversionType.dsl || conversionType == ConversionType.uml_dsl) {
+					converters.add(new DSLPackageConverter((Package)root, ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
+				}
 			}
 		}
 		return converters;

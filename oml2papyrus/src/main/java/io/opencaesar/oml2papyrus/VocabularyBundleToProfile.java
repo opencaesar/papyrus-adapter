@@ -13,8 +13,6 @@ import java.util.stream.Collectors;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.EAnnotation;
-import org.eclipse.emf.ecore.EcoreFactory;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
@@ -24,6 +22,7 @@ import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.DataType;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Enumeration;
+import org.eclipse.uml2.uml.EnumerationLiteral;
 import org.eclipse.uml2.uml.Generalization;
 import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.Package;
@@ -70,9 +69,6 @@ import io.opencaesar.oml2papyrus.util.ProfileUtils;
 import io.opencaesar.oml2papyrus.util.UmlUtils;
 
 public class VocabularyBundleToProfile {
-
-	private static final String IRI_VALUE = "iri_value";
-	private static final String OMLIRI = "http://io.opencaesar.oml/omliri";
 
 	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
 
@@ -255,7 +251,8 @@ public class VocabularyBundleToProfile {
 		logger.debug("Converting : " + entity.getName());
 		StereoTypesInfo infoHolder = getStereoTypeInfo(voc, entity);
 
-		Stereotype stereotype = ProfileUtils.createStereotype(pkg, UmlUtils.getUMLFirendlyName(entity.getName()), entity instanceof Aspect, infoHolder.metaClasses);
+		Stereotype stereotype = ProfileUtils.createStereotype(pkg, entity.getName(), entity instanceof Aspect, infoHolder.metaClasses);
+		UmlUtils.addNameAnnotationIfNeeded(stereotype);
 		converted.put(entity, stereotype);
 		logger.debug("Stereotype " + stereotype.getName() + " was created");
 		
@@ -285,15 +282,16 @@ public class VocabularyBundleToProfile {
 		if (converted.containsKey(enumType)) {
 			return;
 		}
-		String name = UmlUtils.getUMLFirendlyName(enumType.getName());
 		EList<Literal> literals = enumType.getLiterals();
-		logger.debug("Enum : " + name);
-		final Enumeration umlEnum = pkg.createOwnedEnumeration(name);
+		final Enumeration umlEnum = pkg.createOwnedEnumeration(enumType.getName());
+		UmlUtils.addNameAnnotationIfNeeded(umlEnum);
+		logger.debug("Enum : " + umlEnum.getName());
 
 		convertAnnotations(umlEnum, enumType);
 
 		literals.forEach(literal -> {
-			umlEnum.createOwnedLiteral(UmlUtils.getUMLFirendlyName(OmlRead.getLexicalValue(literal)));
+			EnumerationLiteral umlLiteral = umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
+			UmlUtils.addNameAnnotationIfNeeded(umlLiteral);
 		});
 
 		converted.put(enumType, umlEnum);
@@ -327,21 +325,17 @@ public class VocabularyBundleToProfile {
 		Classifier classifier = converted.get(entity);
 		DataType rangeClass = getTypeForRange(range);
 		if (classifier instanceof Class) {
-			Property umlProperty = ((Class)classifier).createOwnedAttribute(UmlUtils.getUMLFirendlyName(prop.getName()), rangeClass);
+			Property umlProperty = ((Class)classifier).createOwnedAttribute(prop.getName(), rangeClass);
+			UmlUtils.addNameAnnotationIfNeeded(umlProperty);
 			String iri = OmlRead.getIri(prop);
-			setIRIAnnotation(umlProperty, iri);
+			UmlUtils.addIRIAnnotation(umlProperty, iri);
 			convertAnnotations(umlProperty, prop);
 			umlProperty.setLower(lower);
 			umlProperty.setUpper(upper);
 		}
 	}
 
-	private void setIRIAnnotation(Property umlProperty, String iri) {
-		EAnnotation annotatoin = EcoreFactory.eINSTANCE.createEAnnotation();
-		annotatoin.setSource(OMLIRI);
-		annotatoin.getDetails().put(IRI_VALUE, iri);
-		umlProperty.getEAnnotations().add(annotatoin);
-	}
+	
 
 	private void updateRelationships(List<Vocabulary> allVoc) {
 		// value restriction is a place holder
@@ -364,7 +358,7 @@ public class VocabularyBundleToProfile {
 				Class srcClass = (Class) converted.get(src);
 				Class trgClass = (Class) converted.get(trgt);
 				boolean isFunctional = entity.isFunctional();
-				String end1Name = UmlUtils.getUMLFirendlyName(srcRel.getName());
+				String end1Name = srcRel.getName();
 				boolean end1Navigable = true;
 				String end2Name = "";
 				boolean end2Navigable = false;
@@ -391,7 +385,7 @@ public class VocabularyBundleToProfile {
 				}
 				if (trgRel != null) {
 					// match with the range
-					end2Name = UmlUtils.getUMLFirendlyName(trgRel.getName());
+					end2Name = trgRel.getName();
 					end2Navigable = true;
 					List<RelationRestrictionAxiom> trgtCard = OmlSearch.findRelationRestrictionAxiomsWithRelation(trgRel);
 					for (RelationRestrictionAxiom axiom : trgtCard) {
@@ -458,9 +452,9 @@ public class VocabularyBundleToProfile {
 							Classifier src = converted.get(entity);
 							Classifier newTrgt = converted.get(newRange);
 							if (reverse) {
-								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper,info.srcIri, "");
+								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper, info.trgtIri,info.srcIri);
 							}else {
-								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, "", info.trgtIri);
+								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, info.srcIri, info.trgtIri);
 							}
 						}
 					}
@@ -562,11 +556,13 @@ public class VocabularyBundleToProfile {
 				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
 		if (!srcRelationIri.isBlank() && end1Navigable) {
 			Property att1 = srcClass.getAttribute(end1Name, trgClass);
-			setIRIAnnotation(att1, srcRelationIri);
+			UmlUtils.addNameAnnotationIfNeeded(att1);
+			UmlUtils.addIRIAnnotation(att1, srcRelationIri);
 		}
 		if (!targetRelationIri.isBlank() && end2Navigable) {
 			Property att2 = trgClass.getAttribute(end2Name, srcClass);
-			setIRIAnnotation(att2, targetRelationIri);
+			UmlUtils.addNameAnnotationIfNeeded(att2);
+			UmlUtils.addIRIAnnotation(att2, targetRelationIri);
 		}
 		createdAssociations.add(key);
 		// reverse Key
