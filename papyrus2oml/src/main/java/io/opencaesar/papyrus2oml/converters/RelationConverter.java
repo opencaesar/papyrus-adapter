@@ -43,7 +43,6 @@ public class RelationConverter implements Runnable {
 
 	@Override
 	public void run() {
-		System.out.print(".");
 		String instanceIri= "";
 		Member instance = null;
 		if (context.conversionType!=ConversionType.uml_dsl) {
@@ -67,9 +66,7 @@ public class RelationConverter implements Runnable {
 			instance = OmlRead.getMemberByIri(description, instanceIri);
 		}
 		
-		if (instance==null || instanceIri.isEmpty()) {
-			System.out.println("error");
-		}
+		assert (instance!=null && !instanceIri.isEmpty());
 
 		int index = 0;
 		for (Member t : types) {

@@ -127,7 +127,6 @@ public class DescriptionBundleToModel {
 		allDescriptions.forEach(d -> visitor.doSwitch(d));
 		logger.info("Converting Relations:");
 		relations.forEach(r -> convertRelationInstance(r));
-		System.out.println("");
 		logger.info("Converting Links:");
 		links.forEach(l -> convertLink(l));
 		return outputResource;
@@ -196,7 +195,6 @@ public class DescriptionBundleToModel {
 	}
 	
 	public void convertRelationInstance(RelationInstance object) {
-		System.out.print(".");
 		List<RelationTypeAssertion> assertions = OmlSearch.findTypeAssertions(object);
 		if (assertions.isEmpty()) {
 			throw new IllegalArgumentException("relation instance "+OmlRead.getIri(object)+" does not have a type");
@@ -299,7 +297,6 @@ public class DescriptionBundleToModel {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void convertLink(LinkAssertion object) {
-		System.out.print(".");
 		RelationEntity relationEntity = OmlRead.getRelationEntity(object.getRelation());
 		Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
 		if (stereotype == null) {
@@ -336,7 +333,6 @@ public class DescriptionBundleToModel {
 				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
 				setFeatureValue(targetFeature,element,Collections.singletonList(target));
 			}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
-				System.out.println("Association");
 				setAssociationDetails((Association)element,Collections.singletonList(source), Collections.singletonList(target));
 			}
 			element.applyStereotype(stereotype);

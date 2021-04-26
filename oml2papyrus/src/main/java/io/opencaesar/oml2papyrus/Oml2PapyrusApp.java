@@ -63,6 +63,13 @@ public class Oml2PapyrusApp {
 	private String outputFolderPath = null;
 		
 	@Parameter(
+		names= {"--forceReifiedLinks","-f"}, 
+		description="Force link to be conveted to reified realtions", 
+		order=6
+	) 
+	private boolean forceReifiedLinks=false;
+
+	@Parameter(
 		names= {"--debug", "-d"}, 
 		description="Shows debug logging statements", 
 		order=4
@@ -77,13 +84,6 @@ public class Oml2PapyrusApp {
 	) 
 	private boolean help;
 	
-	@Parameter(
-		names= {"--forceReifiedLinks","-f"}, 
-		description="Force link to be conveted to reified realtions", 
-		order=6
-	) 
-	private boolean forceReifiedLinks=false;
-
     private final static Logger LOGGER = Logger.getLogger(Oml2PapyrusApp.class);
 
     static {

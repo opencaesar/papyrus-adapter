@@ -45,7 +45,6 @@ public class DSLPackageConverter extends ResourceConverter {
 	public void finish() {
 		context.logger.info("Reations Conversion: ");
 		context.deferred.forEach(r -> r.run());
-		System.out.println("");
 	}
 
 	@Override
@@ -57,7 +56,7 @@ public class DSLPackageConverter extends ResourceConverter {
 		} else if (eObject instanceof Element) {
 			NamedInstanceConverter.convert((Element) eObject, context);
 		} else {
-			System.out.println("Not Converted : " + eObject.eClass().getName());
+			context.logger.warn("Not Converted : " + eObject.eClass().getName());
 		}
 	}
 }
