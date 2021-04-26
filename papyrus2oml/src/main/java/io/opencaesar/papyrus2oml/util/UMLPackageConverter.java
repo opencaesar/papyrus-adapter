@@ -6,14 +6,10 @@ import java.util.List;
 import org.apache.log4j.Logger;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.uml2.uml.Comment;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.ElementImport;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageImport;
-import org.eclipse.uml2.uml.ProfileApplication;
-import org.eclipse.uml2.uml.Slot;
-import org.eclipse.uml2.uml.ValueSpecification;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
@@ -52,6 +48,8 @@ public class UMLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package)eObject,context);
+		} else if (eObject instanceof PackageImport || eObject instanceof ElementImport) {
+			// this will be handled instead as an import statement added when an external element is referenced   
 		} else if (eObject instanceof Element) {
 			UMLNamedInstanceConverter.convert((Element)eObject,context);
 		} else {

@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.Model;
 import org.eclipse.uml2.uml.NamedElement;
 
 import io.opencaesar.oml.Description;
@@ -98,6 +99,7 @@ public class UMLRelationConverter implements Runnable {
 				}
 			} else {
 				IdentifiedElement e = context.umlToOml.get(values);
+				assert (e != null);
 				elements.add(OmlRead.getIri(e));
 				OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
 			}
