@@ -44,7 +44,8 @@ public class DSLPackageConverter extends ResourceConverter {
 	@Override
 	public void finish() {
 		context.logger.info("Reations Conversion: ");
-		context.deferred.forEach(r -> r.run());
+		context.deferredRelations.forEach(r -> r.run());
+		context.deferredLinks.forEach(l -> l.run());
 	}
 
 	@Override

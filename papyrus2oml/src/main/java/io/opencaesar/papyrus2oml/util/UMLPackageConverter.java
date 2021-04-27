@@ -39,7 +39,8 @@ public class UMLPackageConverter extends ResourceConverter {
 	
 	@Override
 	public void finish() {
-		context.deferred.forEach(r -> r.run());
+		context.deferredRelations.forEach(r -> r.run());
+		context.deferredLinks.forEach(l -> l.run());
 	}
 
 	@Override

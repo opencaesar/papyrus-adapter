@@ -108,7 +108,7 @@ public class ConceptInstanceConverter {
 	}
 
 	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val, String propIRI) {
-		context.deferred.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
+		context.deferredLinks.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
 		String ontIRI = UmlUtils.getOntIRI(propIRI);
 		OMLUtil.addUsesIfNeeded(description, ontIRI, context.writer);
 	}

@@ -69,7 +69,7 @@ public class NamedInstanceConverter {
 		if (type instanceof Concept) {
 			ConceptInstanceConverter.convert(element, description,stereotypes, types, context);
 		} else if (type instanceof RelationEntity) {
-			context.deferred.add(new RelationConverter(description,element, context, types,stereotypes));
+			context.deferredRelations.add(new RelationConverter(description,element, context, types,stereotypes));
 		}
 	}
 

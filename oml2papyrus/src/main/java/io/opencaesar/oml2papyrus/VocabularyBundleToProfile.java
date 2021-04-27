@@ -12,7 +12,9 @@ import java.util.stream.Collectors;
 
 import org.apache.log4j.Logger;
 import org.eclipse.emf.common.util.EList;
+import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.AggregationKind;
@@ -56,6 +58,7 @@ import io.opencaesar.oml.ScalarProperty;
 import io.opencaesar.oml.ScalarPropertyCardinalityRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRangeRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRestrictionAxiom;
+import io.opencaesar.oml.ScalarPropertyValueRestrictionAxiom;
 import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.Structure;
 import io.opencaesar.oml.StructuredProperty;
@@ -80,8 +83,6 @@ public class VocabularyBundleToProfile {
 	private Model umlMetaModel;
 	private Map<io.opencaesar.oml.Type, Classifier> converted = new HashMap<>();
 	private Map<RelationEntity, AssociationInfo> relationToAssociationInfo = new HashMap<>();
-	private Set<AssociationKey> createdAssociations = new HashSet<>();
-	private Map<Classifier,Set<String>> classifierEndName = new HashMap<>();
 
 	private static Set<String> vocsToSkip = new HashSet<>();
 	static {
@@ -165,7 +166,7 @@ public class VocabularyBundleToProfile {
 		}
 
 		// Properties
-		convertAllProperties(profile,allVoc);
+		convertAllProperties(profile, allVoc);
 		
 		// Relationships
 		updateRelationships(allVoc);
@@ -173,8 +174,11 @@ public class VocabularyBundleToProfile {
 		// update the generalizations
 		updateAllGeneralizations();
 		
-		// now we need to deal with restrictions (Range and Value)
+		// deal with relation restrictions (Range and Value)
 		updateRestrictions(allVoc);
+		
+		// add property redefinitions
+		addPropertyRedifinitions(profile);
 	}
 
 	private void convertAllProperties(Profile profile, List<Vocabulary> allVoc) {
@@ -267,14 +271,14 @@ public class VocabularyBundleToProfile {
 		List<FeatureProperty> props = OmlSearch.findFeaturePropertiesWithDomain(entity);
 		for (FeatureProperty prop : props){
 			if (prop instanceof ScalarProperty) {
-				convertProperty(pkg,(ScalarProperty)prop, entity,propToRestirctions);
+				convertProperty(pkg, (ScalarProperty)prop, entity, propToRestirctions);
 				propToRestirctions.remove(prop);
 			}
 		}
 		
 		Set<Entry<ScalarProperty, List<PropertyRestrictionAxiom>>> entries = propToRestirctions.entrySet();
 		for (Entry<ScalarProperty, List<PropertyRestrictionAxiom>> entry : entries) {
-			convertProperty(pkg, entry.getKey(), entity,propToRestirctions);
+			convertProperty(pkg, entry.getKey(), entity, propToRestirctions);
 		}
 	}
 
@@ -301,6 +305,8 @@ public class VocabularyBundleToProfile {
 		int upper = -1;
 		int lower = 0;
 		Scalar range = prop.getRange();
+		String defaultValue = null;
+		
 		if (prop.isFunctional()) {
 			upper = 1;
 		}
@@ -315,9 +321,12 @@ public class VocabularyBundleToProfile {
 					} else if (card.getKind() == CardinalityRestrictionKind.MAX) {
 						upper = (int) card.getCardinality();
 					}
-				}else if (rest instanceof ScalarPropertyRangeRestrictionAxiom) {
+				} else if (rest instanceof ScalarPropertyRangeRestrictionAxiom) {
 					ScalarPropertyRangeRestrictionAxiom rangeAxiom = (ScalarPropertyRangeRestrictionAxiom)rest;
 					range = rangeAxiom.getRange();
+				} else if (rest instanceof ScalarPropertyValueRestrictionAxiom) {
+					ScalarPropertyValueRestrictionAxiom valueAxiom = (ScalarPropertyValueRestrictionAxiom)rest;
+					defaultValue = OmlRead.getLexicalValue(valueAxiom.getValue());
 				}
 			}
 		}
@@ -332,6 +341,7 @@ public class VocabularyBundleToProfile {
 			convertAnnotations(umlProperty, prop);
 			umlProperty.setLower(lower);
 			umlProperty.setUpper(upper);
+			umlProperty.setDefault(defaultValue);
 		}
 	}
 
@@ -349,17 +359,17 @@ public class VocabularyBundleToProfile {
 			for (RelationEntity entity : entities) {
 				logger.debug("Converting Relation: " + entity.getName());
 				logger.debug(entity);
-				ForwardRelation srcRel = entity.getForwardRelation();
-				ReverseRelation trgRel = entity.getReverseRelation();
-				String srcRelationIri = OmlRead.getIri(srcRel);
+				ReverseRelation srcRel = entity.getReverseRelation();
+				ForwardRelation trgRel = entity.getForwardRelation();
+				String srcRelationIri = srcRel==null ? "" : OmlRead.getIri(srcRel);
 				String targetRelationIri = trgRel==null ? "" : OmlRead.getIri(trgRel);
-				Entity src = srcRel.getDomain();
-				Entity trgt = srcRel.getRange();
+				Entity src = entity.getSource();
+				Entity trgt = entity.getTarget();
 				Class srcClass = (Class) converted.get(src);
 				Class trgClass = (Class) converted.get(trgt);
 				boolean isFunctional = entity.isFunctional();
-				String end1Name = srcRel.getName();
-				boolean end1Navigable = true;
+				String end1Name = "";
+				boolean end1Navigable = false;
 				String end2Name = "";
 				boolean end2Navigable = false;
 				int end1Lower = 0;
@@ -369,16 +379,21 @@ public class VocabularyBundleToProfile {
 				if (isFunctional) {
 					end2Upper = 1;
 				}
-				List<RelationRestrictionAxiom> srcCard = OmlSearch.findRelationRestrictionAxiomsWithRelation(srcRel);
-				for (RelationRestrictionAxiom axiom : srcCard) {
-					if (axiom instanceof RelationCardinalityRestrictionAxiom) {
-						RelationCardinalityRestrictionAxiom cardAxiom = (RelationCardinalityRestrictionAxiom) axiom;
-						Entity range = cardAxiom.getRelation().getDomain();
-						if (range==src) {
-							if (cardAxiom.getKind() == CardinalityRestrictionKind.MIN) {
-								end1Lower = (int) cardAxiom.getCardinality();
-							} else if (cardAxiom.getKind() == CardinalityRestrictionKind.MAX) {
-								end1Upper = (int) cardAxiom.getCardinality();
+				if (srcRel != null) {
+					// match with the range
+					end1Name = srcRel.getName();
+					end1Navigable = true;
+					List<RelationRestrictionAxiom> srcCard = OmlSearch.findRelationRestrictionAxiomsWithRelation(srcRel);
+					for (RelationRestrictionAxiom axiom : srcCard) {
+						if (axiom instanceof RelationCardinalityRestrictionAxiom) {
+							RelationCardinalityRestrictionAxiom cardAxiom = (RelationCardinalityRestrictionAxiom) axiom;
+							Entity range = cardAxiom.getRelation().getDomain();
+							if (range==src) {
+								if (cardAxiom.getKind() == CardinalityRestrictionKind.MIN) {
+									end1Lower = (int) cardAxiom.getCardinality();
+								} else if (cardAxiom.getKind() == CardinalityRestrictionKind.MAX) {
+									end1Upper = (int) cardAxiom.getCardinality();
+								}
 							}
 						}
 					}
@@ -402,7 +417,7 @@ public class VocabularyBundleToProfile {
 						}
 					}
 				}
-				AssociationInfo aInfo = new AssociationInfo(trgClass,end1Name,end1Navigable,end1Lower,end1Upper,end2Name,end2Navigable,end2Lower,end2Upper,srcRelationIri,targetRelationIri);
+				AssociationInfo aInfo = new AssociationInfo(srcClass,end1Name,end1Navigable,end1Lower,end1Upper,end2Name,end2Navigable,end2Lower,end2Upper,srcRelationIri,targetRelationIri);
 				relationToAssociationInfo.put(entity, aInfo);
 				createAssociation(srcClass, trgClass, end1Name, end1Navigable, end2Name, end2Navigable, end1Lower,
 						end1Upper, end2Lower, end2Upper,srcRelationIri, targetRelationIri);
@@ -452,9 +467,9 @@ public class VocabularyBundleToProfile {
 							Classifier src = converted.get(entity);
 							Classifier newTrgt = converted.get(newRange);
 							if (reverse) {
-								createAssociation(newTrgt,src, info.end2Name, info.end2Navigable,info.end1Name, info.end1Navigable, info.end2Lower, info.end2Upper,info.end1Lower, info.end1Upper, info.trgtIri,info.srcIri);
+								createAssociation(newTrgt, src, info.end1Name, info.end1Navigable, info.end2Name, false, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, info.srcIri, info.trgtIri);
 							}else {
-								createAssociation(src,newTrgt, info.end1Name, info.end1Navigable, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, info.srcIri, info.trgtIri);
+								createAssociation(src, newTrgt, info.end1Name, false, info.end2Name, info.end2Navigable, info.end1Lower, info.end1Upper, info.end2Lower, info.end2Upper, info.srcIri, info.trgtIri);
 							}
 						}
 					}
@@ -463,6 +478,40 @@ public class VocabularyBundleToProfile {
 		}
 	}
 
+	private static void addPropertyRedifinitions(Profile profile) {
+		TreeIterator<EObject> i = profile.eAllContents();
+		while (i.hasNext()) {
+			EObject o = i.next();
+			if (o instanceof Property) {
+				Property p = (Property) o;
+				Element e = (Element) p.getOwner();
+				if (e instanceof Class) {
+					Class c = (Class) e;
+					List<Property> redefinedProperties = new ArrayList<>();
+					for (Class s : c.getSuperClasses()) {
+						redefinedProperties.addAll(getPropertiesToRedefine(p, s));
+					}
+					p.getRedefinedProperties().addAll(redefinedProperties);
+				}
+			}
+		}
+	}
+
+	private static List<Property> getPropertiesToRedefine(Property p, Class superClass) {
+		List<Property> redefinedProperties = new ArrayList<>();
+		Property redefinedProperty = superClass.getOwnedAttributes().stream()
+			.filter(p2 -> p2.getName().equals(p.getName()))
+			.findAny().orElse(null);
+		if (redefinedProperty != null) {
+			redefinedProperties.add(redefinedProperty);
+		} else {
+			for (Class s : superClass.getSuperClasses()) {
+				redefinedProperties.addAll(getPropertiesToRedefine(p, s));
+			}
+		}
+		return redefinedProperties;
+	}
+		
 	private boolean canConvert(Type type) {
 		return type instanceof Entity || type instanceof EnumeratedScalar || type instanceof Structure;
 	}
@@ -545,44 +594,23 @@ public class VocabularyBundleToProfile {
 	
 	private void createAssociation(Classifier srcClass, Classifier trgClass, String end1Name, boolean end1Navigable,
 			String end2Name, boolean end2Navigable, int end1Lower, int end1Upper, int end2Lower, int end2Upper, String srcRelationIri, String targetRelationIri) {
-		AssociationKey key = new AssociationKey(srcClass,end1Name,trgClass,end2Name);
-		if (createdAssociations.contains(key)) {
-			return;
-		}
-	   	end1Navigable &= isNAvigable(srcClass,end1Name);
-		end2Navigable &= isNAvigable(trgClass,end2Name);
 		// if it is there it means it was handled at creation time
-		srcClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
-				trgClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
+		trgClass.createAssociation(end1Navigable, AggregationKind.NONE_LITERAL, end1Name, end1Lower, end1Upper,
+				srcClass, end2Navigable, AggregationKind.NONE_LITERAL, end2Name, end2Lower, end2Upper);
 		if (!srcRelationIri.isBlank() && end1Navigable) {
-			Property att1 = srcClass.getAttribute(end1Name, trgClass);
+			Property att1 = trgClass.getAttribute(end1Name, srcClass);
 			UmlUtils.addNameAnnotationIfNeeded(att1);
 			UmlUtils.addIRIAnnotation(att1, srcRelationIri);
 		}
 		if (!targetRelationIri.isBlank() && end2Navigable) {
-			Property att2 = trgClass.getAttribute(end2Name, srcClass);
+			Property att2 = srcClass.getAttribute(end2Name, trgClass);
 			UmlUtils.addNameAnnotationIfNeeded(att2);
 			UmlUtils.addIRIAnnotation(att2, targetRelationIri);
 		}
-		createdAssociations.add(key);
-		// reverse Key
-		createdAssociations.add(new AssociationKey(trgClass,end2Name,srcClass,end1Name));
 	}
 	
-	
-	private boolean isNAvigable(Classifier srcClass, String end1Name) {
-		Set<String> names = classifierEndName.get(srcClass);
-		if (names==null) {
-			names = new HashSet<>();
-			classifierEndName.put(srcClass, names);
-		}
-		boolean retVal = names.contains(end1Name);
-		names.add(end1Name);
-		return !retVal;
-	}
-
 	private static class AssociationInfo {
-		public Class trgClass;
+		public Class srcClass;
 		public String end1Name = "";
 		public boolean end1Navigable = true;
 		public String end2Name = "";
@@ -594,9 +622,9 @@ public class VocabularyBundleToProfile {
 		public String srcIri = "";
 		public String trgtIri = "";
 		
-		public AssociationInfo(Class trgtClass, String end1Name, boolean end1Navigable, int end1Lower, int end1Upper,
+		public AssociationInfo(Class srcClass, String end1Name, boolean end1Navigable, int end1Lower, int end1Upper,
 							   String end2Name, boolean end2NAvigable, int end2Lower, int end2Upper, String srcIri, String trgtIri) {
-			this.trgClass = trgtClass;
+			this.srcClass = srcClass;
 			this.end1Name = end1Name;
 			this.end1Navigable = end1Navigable;
 			this.end1Lower = end1Lower;
@@ -611,7 +639,7 @@ public class VocabularyBundleToProfile {
 		
 		@Override
 		public String toString() {
-			return "Relation Entity for Target : " + trgClass.getName();
+			return "Relation Entity for : " + srcClass.getName();
 		}
 	}
 
@@ -685,4 +713,5 @@ public class VocabularyBundleToProfile {
 			metaClasses.add(metaClassName);
 		}
 	}
+
 }

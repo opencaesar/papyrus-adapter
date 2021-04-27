@@ -42,7 +42,7 @@ public class UMLNamedInstanceConverter {
 			if (type instanceof Concept) {
 				UMLConceptInstanceConverter.convert(element, type, context);
 			} else if (type instanceof RelationEntity) {
-				context.deferred.add(new UMLRelationConverter(element,(RelationEntity) type, description, context));
+				context.deferredRelations.add(new UMLRelationConverter(element,(RelationEntity) type, description, context));
 			} else if (type instanceof Aspect){
 				/// UML_DSL and stereo typed => relation
 				if (context.conversionType == ConversionType.uml_dsl && 

@@ -69,11 +69,11 @@ public class UMLConceptInstanceConverter {
 				EList<?> values = (EList<?>) val;
 				if (!values.isEmpty()) {
 					String propIRI = getIri(feature);
-					context.deferred.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
+					context.deferredLinks.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
 				}
 			}else if (val!=null) {
 				String propIRI = getIri(feature);
-				context.deferred.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
+				context.deferredLinks.add(new UMLLinkConverter(description, instanceIRI, propIRI, val, context ));
 			}
 		}
 	}

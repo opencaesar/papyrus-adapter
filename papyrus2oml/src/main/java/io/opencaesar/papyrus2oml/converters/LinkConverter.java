@@ -62,11 +62,12 @@ public class LinkConverter implements Runnable {
 		Element baseElemnt = UMLUtil.getBaseElement(eValue);
 		IdentifiedElement omlElement = context.umlToOml.get(baseElemnt);
 		if (omlElement==null) {
-			return;
+			omlElement = context.getOmlElementForIgnoredElement(baseElemnt, description) ;
 		}
 		Ontology ont = OmlRead.getOntology(omlElement);
 		String targetIri = OmlRead.getIri(omlElement);
 		OMLUtil.addExtendsIfNeeded(description, ont.getIri(), context.writer);
 		context.writer.addLinkAssertion(description, instanceIri, relationIri, targetIri);
 	}
+	
 }

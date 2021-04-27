@@ -44,8 +44,7 @@ public class UmlUtils {
 	
 	public static String getIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
-		IdentifiedElement oPkg = context.umlToOml.get(pkg);
-		Ontology ontology = OmlRead.getOntology(oPkg);
+		Ontology ontology = (Ontology) context.umlToOml.get(pkg);
 		return OmlRead.getNamespace(ontology) + UmlUtils.getName(element);
 	}
 	

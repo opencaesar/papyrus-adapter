@@ -20,8 +20,10 @@ import org.eclipse.uml2.uml.Property;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
+import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
+import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlConstants;
@@ -36,7 +38,8 @@ public abstract class ResourceConverter {
 		public OmlCatalog catalog;
 		public OmlWriter writer;
 		public Logger logger;
-		public List<Runnable> deferred = new ArrayList<>();
+		public List<Runnable> deferredRelations = new ArrayList<>();
+		public List<Runnable> deferredLinks = new ArrayList<>();
 		public Package rootPackage;
 		public Map<Element, io.opencaesar.oml.IdentifiedElement> umlToOml = new HashMap<>();
 		private Vocabulary umlVoc;
@@ -65,6 +68,25 @@ public abstract class ResourceConverter {
 			}
 		}
 		
+		public IdentifiedElement getOmlElementForIgnoredElement(Element element, Description description) {
+			String targetIri = getIgnoredElementIRI(element, this);
+			Member omlElement = OmlRead.getMemberByIri(description.eResource().getResourceSet(), targetIri);
+			if(omlElement==null) {
+				throw new RuntimeException("Element " + targetIri + " cannot be found");
+			}
+			return omlElement;
+		}
+		
+		private static String getIgnoredElementIRI(Element element, ConversionContext context) {
+			Package pkg = element.getNearestPackage();
+			// try load the elements ontology directly from context 
+			var bundleResource = context.descriptionBundle.eResource();
+			var ontologyUri = OmlRead.getResolvedUri(bundleResource, URI.createURI(pkg.getURI()));
+			Resource ontologyResource = bundleResource.getResourceSet().getResource(ontologyUri, true);
+			Ontology ontology = OmlRead.getOntology(ontologyResource);
+			return OmlRead.getNamespace(ontology) + UmlUtils.getName(element);
+		}
+
 		public Member getUmlOmlElementByName(String name) {
 			return OmlRead.getMemberByName(umlVoc, name);
 		}

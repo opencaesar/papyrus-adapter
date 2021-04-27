@@ -124,6 +124,9 @@ public class RelationConverter implements Runnable {
 		}
 		for (Object value : valueAsCollection) {
 			IdentifiedElement e = context.umlToOml.get(value);
+			if (e==null) {
+				e = context.getOmlElementForIgnoredElement((Element)value, description) ;
+			}
 			result.add(OmlRead.getIri(e));
 			OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
 		}
