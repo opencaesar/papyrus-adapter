@@ -86,11 +86,15 @@ public class UMLRelationConverter implements Runnable {
 				for (Object value : ((Collection<?>) values)) {
 					IdentifiedElement e = context.umlToOml.get(value);
 					if (e==null) {
-						// to avoid order dependency
-						NamedElement sourceELment = (NamedElement)value;
-						Member srcType = context.getUmlOmlElementByName(sourceELment.eClass().getName());
-						createInstance((RelationEntity)srcType, sourceELment, context, description);
-						e = context.umlToOml.get(value);
+						e = context.getOmlElementForIgnoredElement((Element)value, description) ;
+						if (e==null) {
+							// should happen only if the element is a relation 
+							// just in case we have a relation with source relation
+							NamedElement sourceELment = (NamedElement)value;
+							Member srcType = context.getUmlOmlElementByName(sourceELment.eClass().getName());
+							createInstance((RelationEntity)srcType, sourceELment, context, description);
+							e = context.umlToOml.get(value);
+						}
 					}
 					elements.add(OmlRead.getIri(e));
 					Ontology ont = OmlRead.getOntology(e);
@@ -98,7 +102,9 @@ public class UMLRelationConverter implements Runnable {
 				}
 			} else {
 				IdentifiedElement e = context.umlToOml.get(values);
-				assert (e != null);
+				if (e==null) {
+					e = context.getOmlElementForIgnoredElement((Element)values, description) ;
+				}
 				elements.add(OmlRead.getIri(e));
 				OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
 			}
