@@ -52,6 +52,9 @@ public class PackageConverter {
 		if (context.conversionType != ConversionType.uml_dsl || context.DSL) {
 			DescriptionBundle bundle = context.writer.createDescriptionBundle(uri, iri, SeparatorKind.HASH, prefix + calcuatedPostFix);
 			context.descriptionBundle = bundle;
+			if (context.conversionType == ConversionType.uml) {
+				context.writer.addDescriptionBundleUsage(bundle, UmlUtils.UML_BUNDLE_IRI, null);
+			}
 		}
 		if (!empty) {
 			convertPackage(package_, postFix, context);

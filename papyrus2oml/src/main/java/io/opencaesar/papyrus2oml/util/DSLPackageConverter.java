@@ -9,12 +9,14 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Profile;
+import org.eclipse.uml2.uml.ProfileApplication;
 
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlWriter;
 import io.opencaesar.papyrus2oml.ConversionType;
 import io.opencaesar.papyrus2oml.converters.NamedInstanceConverter;
 import io.opencaesar.papyrus2oml.converters.PackageConverter;
+import io.opencaesar.papyrus2oml.converters.ProfileApplicationConverter;
 
 public class DSLPackageConverter extends ResourceConverter {
 	
@@ -54,6 +56,8 @@ public class DSLPackageConverter extends ResourceConverter {
 			PackageConverter.convertRootPackage(context.rootPackage,context.postFix, context);
 		} else if (eObject instanceof Package) {
 			PackageConverter.convertPackage((Package) eObject,context.postFix, context);
+		} else if (eObject instanceof ProfileApplication) {
+			ProfileApplicationConverter.convert((ProfileApplication) eObject, context);
 		} else if (eObject instanceof Element) {
 			NamedInstanceConverter.convert((Element) eObject, context);
 		} else {

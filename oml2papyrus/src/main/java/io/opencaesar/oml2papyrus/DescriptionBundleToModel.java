@@ -41,9 +41,11 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
+import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Instance;
 import io.opencaesar.oml.LinkAssertion;
 import io.opencaesar.oml.NamedInstance;
+import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationEntity;
 import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.RelationTypeAssertion;
@@ -297,7 +299,11 @@ public class DescriptionBundleToModel {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private void convertLink(LinkAssertion object) {
-		RelationEntity relationEntity = OmlRead.getRelationEntity(object.getRelation());
+		Relation relation = object.getRelation();
+		RelationEntity relationEntity = OmlRead.getRelationEntity(relation);
+		NamedInstance sourceInst = OmlRead.getSource(object);
+		NamedInstance targetInst = object.getTarget();
+		
 		Stereotype stereotype = (Stereotype) iriToTypeMap.get(OmlRead.getIri(relationEntity));
 		if (stereotype == null) {
 			throw new IllegalArgumentException("stereotype "+OmlRead.getIri(relationEntity)+" is not found in the profile");
@@ -311,13 +317,17 @@ public class DescriptionBundleToModel {
 		// reified flow should be triggered if the reified flag is ON
 		EClass eClass = (EClass) UMLPackage.eINSTANCE.getEClassifier(metaclasses.get(0).getName());
 		
-		NamedElement source = (NamedElement) oml2EcoreMap.get(OmlRead.getSource(object));
-		NamedElement target = (NamedElement) oml2EcoreMap.get(object.getTarget());
-		
 		if (forceReifiedLinks) {
 			PackageableElement element = (PackageableElement) UMLFactory.eINSTANCE.create(eClass) ;
 			element.setName(null);
 			oml2EcoreMap.put(object, element);
+
+			NamedElement source = (relation instanceof ForwardRelation) ?
+					(NamedElement) oml2EcoreMap.get(sourceInst) :
+					(NamedElement) oml2EcoreMap.get(targetInst);
+			NamedElement target = (relation instanceof ForwardRelation) ?
+					(NamedElement) oml2EcoreMap.get(targetInst) :
+						(NamedElement) oml2EcoreMap.get(sourceInst);
 
 			org.eclipse.uml2.uml.Package package_ = (Package) oml2EcoreMap.get(OmlRead.getOntology(object));
 			package_.getPackagedElements().add(element);
@@ -337,8 +347,8 @@ public class DescriptionBundleToModel {
 			}
 			element.applyStereotype(stereotype);
 		}else {
-			NamedInstance sourceInst = OmlRead.getSource(object);
-			NamedInstance targetInst = object.getTarget();
+			NamedElement source = (NamedElement) oml2EcoreMap.get(sourceInst);
+			NamedElement target = (NamedElement) oml2EcoreMap.get(targetInst);
 			EObject sourceApplication = getStereoTypeApplication(sourceInst, source);
 			EObject targetApplication = getStereoTypeApplication(targetInst, target);
 			if (targetApplication==null) {

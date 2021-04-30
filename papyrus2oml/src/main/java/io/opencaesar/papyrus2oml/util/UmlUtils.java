@@ -25,6 +25,7 @@ public class UmlUtils {
 
 	public static final String UML_IRI = "http://www.eclipse.org/uml2/5.0.0/UML";
 	public static final String UML_NS = UML_IRI+"#";
+	public static final String UML_BUNDLE_IRI = UML_IRI+"-Bundle";
 	
 	static public String getIri(Property property) {
 		EAnnotation annotation = property.getEAnnotation(OMLIRI);
