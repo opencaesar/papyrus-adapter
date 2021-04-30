@@ -80,7 +80,7 @@ public abstract class ResourceConverter {
 		private static String getIgnoredElementIRI(Element element, ConversionContext context) {
 			Package pkg = element.getNearestPackage();
 			// try load the elements ontology directly from context 
-			var bundleResource = context.descriptionBundle.eResource();
+			var bundleResource = context.umlVoc.eResource();
 			var ontologyUri = OmlRead.getResolvedUri(bundleResource, URI.createURI(pkg.getURI()));
 			Resource ontologyResource = bundleResource.getResourceSet().getResource(ontologyUri, true);
 			Ontology ontology = OmlRead.getOntology(ontologyResource);
