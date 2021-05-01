@@ -16,7 +16,6 @@ import io.opencaesar.oml.Concept;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Import;
 import io.opencaesar.oml.Member;
-import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.RelationEntity;
 import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.Vocabulary;
@@ -27,8 +26,8 @@ import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 import io.opencaesar.papyrus2oml.util.UmlUtils;
 
 public class UMLNamedInstanceConverter {
-	private static final String CONCEPT_POSTFIX = "_concept";
-	private static final String RELATION_POSTFIX = "_relation";
+	private static final String CONCEPT_POSTFIX = "_Concept";
+	private static final String RELATION_POSTFIX = "_Relation";
 	
 	static public void convert(Element element, ConversionContext context) throws IOException {
 		String name = UmlUtils.getName(element);
@@ -48,12 +47,10 @@ public class UMLNamedInstanceConverter {
 				if (context.conversionType == ConversionType.uml_dsl && 
 					shouldCreateRelation(element, description,rs, context)) {
 					Member relType = context.getUmlOmlElementByName(element.eClass().getName() + RELATION_POSTFIX);
-					Ontology ont = OmlRead.getOntology(relType);
 					RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), Collections.emptyList(),Collections.emptyList());
 					context.writer.addRelationTypeAssertion(description,OmlRead.getIri(instance), OmlRead.getIri(relType));
-					OMLUtil.addExtendsIfNeeded(description, ont.getIri(), context.writer);
 				} else {
-					createCooncept(element, context);
+					createConcept(element, context);
 				}
 			}else {
 				context.logger.warn("Did not convert: " + element);
@@ -63,7 +60,7 @@ public class UMLNamedInstanceConverter {
 		}
 	}
 
-	private static void createCooncept(Element element, ConversionContext context) {
+	private static void createConcept(Element element, ConversionContext context) {
 		Member conceptType = context.getUmlOmlElementByName(element.eClass().getName() + CONCEPT_POSTFIX);
 		UMLConceptInstanceConverter.convert(element, conceptType, context);
 	}
