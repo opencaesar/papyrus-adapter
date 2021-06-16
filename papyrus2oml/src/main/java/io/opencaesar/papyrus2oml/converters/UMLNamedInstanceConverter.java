@@ -1,7 +1,23 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 import org.eclipse.emf.common.util.URI;
@@ -17,7 +33,6 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Import;
 import io.opencaesar.oml.Member;
 import io.opencaesar.oml.RelationEntity;
-import io.opencaesar.oml.RelationInstance;
 import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.ConversionType;
@@ -43,14 +58,11 @@ public class UMLNamedInstanceConverter {
 			} else if (type instanceof RelationEntity) {
 				context.deferredRelations.add(new UMLRelationConverter(element,(RelationEntity) type, description, context));
 			} else if (type instanceof Aspect){
-				/// UML_DSL and stereo typed => relation
-				if (context.conversionType == ConversionType.uml_dsl && 
-					shouldCreateRelation(element, description,rs, context)) {
-					Member relType = context.getUmlOmlElementByName(element.eClass().getName() + RELATION_POSTFIX);
-					RelationInstance instance = context.writer.addRelationInstance(description,  UmlUtils.getName(element), Collections.emptyList(),Collections.emptyList());
-					context.writer.addRelationTypeAssertion(description,OmlRead.getIri(instance), OmlRead.getIri(relType));
+				/// UML_DSL and stereotyped => relation
+				if (context.conversionType == ConversionType.uml_dsl && shouldCreateRelation(element, description,rs, context)) {
+					createRelationInstance(description, element, context);
 				} else {
-					createConcept(element, context);
+					createConceptInstance(element, context);
 				}
 			}else {
 				context.logger.warn("Did not convert: " + element);
@@ -60,9 +72,14 @@ public class UMLNamedInstanceConverter {
 		}
 	}
 
-	private static void createConcept(Element element, ConversionContext context) {
-		Member conceptType = context.getUmlOmlElementByName(element.eClass().getName() + CONCEPT_POSTFIX);
+	private static void createConceptInstance(Element element, ConversionContext context) {
+		Concept conceptType = (Concept) context.getUmlOmlElementByName(element.eClass().getName() + CONCEPT_POSTFIX);
 		UMLConceptInstanceConverter.convert(element, conceptType, context);
+	}
+
+	private static void createRelationInstance(Description description, Element element, ConversionContext context) {
+		RelationEntity relType = (RelationEntity) context.getUmlOmlElementByName(element.eClass().getName() + RELATION_POSTFIX);
+		context.deferredRelations.add(new UMLRelationConverter(element, relType, description, context));
 	}
 
 	private static boolean shouldCreateRelation(Element element, Description description, ResourceSet rs, ConversionContext context) {
@@ -70,10 +87,10 @@ public class UMLNamedInstanceConverter {
 		List<Stereotype> stereotypes = element.getAppliedStereotypes();
 		for (Stereotype sterotype : stereotypes) {
 			Package package_ = sterotype.getNearestPackage();
-			Import i = OMLUtil.addUsesIfNeeded(description, UmlUtils.getIRI(package_), context.writer);
+			Import i = OMLUtil.addUsesIfNeeded(description, UmlUtils.getIRI(package_), context.builder);
 			Member type = (Member) context.umlToOml.get(sterotype);
 			if (type == null) {
-				URI uri = OmlRead.getResolvedImportUri(i);
+				URI uri = OmlRead.getResolvedUri(i);
 				if (uri == null) {
 					throw new RuntimeException("Cannot resolve IRI '" + UmlUtils.getIRI(package_) + "'");
 				}

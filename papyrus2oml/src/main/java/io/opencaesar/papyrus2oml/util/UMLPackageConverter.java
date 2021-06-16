@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.util;
 
 import java.io.IOException;
@@ -12,15 +29,15 @@ import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.PackageImport;
 
 import io.opencaesar.oml.util.OmlCatalog;
-import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.papyrus2oml.ConversionType;
 import io.opencaesar.papyrus2oml.converters.PackageConverter;
 import io.opencaesar.papyrus2oml.converters.UMLNamedInstanceConverter;
 
 public class UMLPackageConverter extends ResourceConverter {
 	
-	public UMLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlWriter writer, ResourceSet omlResourceSet, ConversionType conversionType, Logger logger) {
-		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, omlResourceSet,conversionType, logger));
+	public UMLPackageConverter(Package rootPackage, List<String> ignoredIriPrefixes, OmlCatalog catalog, OmlBuilder builder, ResourceSet omlResourceSet, ConversionType conversionType, Logger logger) {
+		super(new ConversionContext(ignoredIriPrefixes, catalog, builder, omlResourceSet,conversionType, logger));
 		context.rootPackage = rootPackage;
 		logger.info("UML converter in : " + (conversionType==ConversionType.uml? " UML mode" : "UML-DSL model"));
 	}

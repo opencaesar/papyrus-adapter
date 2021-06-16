@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.util;
 
 import java.util.ArrayList;
@@ -14,7 +31,6 @@ import org.eclipse.uml2.uml.Property;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
 import io.opencaesar.oml.Ontology;
-import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 
 public class UmlUtils {
@@ -46,11 +62,11 @@ public class UmlUtils {
 	public static String getIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
 		Ontology ontology = (Ontology) context.umlToOml.get(pkg);
-		return OmlRead.getNamespace(ontology) + UmlUtils.getName(element);
+		return ontology.getNamespace() + UmlUtils.getName(element);
 	}
 	
 	public static String getIRI(Description description, Element element) {
-		return OmlRead.getNamespace(description) + UmlUtils.getName(element);
+		return description.getNamespace() + UmlUtils.getName(element);
 	}
 	
 	
@@ -102,8 +118,8 @@ public class UmlUtils {
 	public static String getUMLIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
 		IdentifiedElement oPkg = context.umlToOml.get(pkg);
-		Ontology ontology = OmlRead.getOntology(oPkg);
-		String ns = OmlRead.getNamespace(ontology);
+		Ontology ontology = oPkg.getOntology();
+		String ns = ontology.getNamespace();
 		if (context.postFix!=null) {
 			String end = "" + ns.charAt(ns.length()-1);
 			ns = ns.substring(0,ns.length()-(context.postFix.length()+2)) + end;
@@ -114,8 +130,8 @@ public class UmlUtils {
 	public static String getUMLONTIRI(Element element, ConversionContext context) {
 		Package pkg = element.getNearestPackage();
 		IdentifiedElement oPkg = context.umlToOml.get(pkg);
-		Ontology ontology = OmlRead.getOntology(oPkg);
-		String ns = OmlRead.getNamespace(ontology);
+		Ontology ontology = oPkg.getOntology();
+		String ns = ontology.getNamespace();
 		if (context.postFix!=null) {
 			ns = ns.substring(0,ns.length()-(context.postFix.length()+2));
 		}

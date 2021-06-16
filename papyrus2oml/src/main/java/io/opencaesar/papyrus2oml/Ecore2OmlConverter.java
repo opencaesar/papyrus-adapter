@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml;
 
 import java.io.File;
@@ -14,20 +31,20 @@ import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 
 import io.opencaesar.oml.util.OmlCatalog;
-import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.papyrus2oml.util.ResourceConverter;
 
 public class Ecore2OmlConverter {
 
 	protected File inputModelFile;
 	protected OmlCatalog catalog;
-	protected OmlWriter writer;
+	protected OmlBuilder builder;
 	protected Logger logger;
 	
-	public Ecore2OmlConverter(File inputModelFile, OmlCatalog catalog, OmlWriter writer, Logger logger) {
+	public Ecore2OmlConverter(File inputModelFile, OmlCatalog catalog, OmlBuilder builder, Logger logger) {
 		this.inputModelFile = inputModelFile;
 		this.catalog = catalog;
-		this.writer = writer;
+		this.builder = builder;
 		this.logger = logger;
 	}
 
@@ -63,7 +80,7 @@ public class Ecore2OmlConverter {
 			converter.finish();
 		}
 		
-		return writer.getNewResources();
+		return builder.getNewResources();
 		
 	}
 	
