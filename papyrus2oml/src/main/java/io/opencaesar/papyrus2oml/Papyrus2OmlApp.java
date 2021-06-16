@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml;
 
 import java.io.File;
@@ -29,7 +46,7 @@ import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
-import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.oml.util.OmlXMIResourceFactory;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 
@@ -133,16 +150,16 @@ public class Papyrus2OmlApp {
 		final XtextResourceSet omlResourceSet = new XtextResourceSet();
 		final List<Resource> omlResources = new ArrayList<>();
 
-		// create the Oml writer
-		final OmlWriter writer = new OmlWriter(omlResourceSet);
-		writer.start();
+		// create the Oml builder
+		final OmlBuilder builder = new OmlBuilder(omlResourceSet);
+		builder.start();
 				
 		// Convert the input model to OML resources
-		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, writer, omlResourceSet,conversionType, LOGGER);
+		Papyrus2OmlConverter converter = new Papyrus2OmlConverter(inputModelFile, ignoredIriPrefixes, catalog, builder, omlResourceSet,conversionType, LOGGER);
 		omlResources.addAll(converter.convert());
 
-		// finish the Oml writer
-		writer.finish();
+		// finish the Oml builder
+		builder.finish();
 		
 		// save the Oml resources
 		for (Resource resource : omlResources) {

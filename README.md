@@ -1,6 +1,6 @@
 # OML Adapter for Papyrus
 
-[![Build Status](https://travis-ci.org/opencaesar/papyrus-adapter.svg?branch=master)](https://travis-ci.org/opencaesar/papyrus-adapter)
+[![Build Status](https://travis-ci.com/opencaesar/papyrus-adapter.svg?branch=master)](https://travis-ci.com/opencaesar/papyrus-adapter)
 [![Release](https://img.shields.io/github/v/tag/opencaesar/papyrus-adapter?label=release)](https://github.com/opencaesar/papyrus-adapter/releases/latest)
 
 An [OML](https://opencaesar.github.io/oml) adapter for [Papyrus](https://www.eclipse.org/papyrus/) modeling tool

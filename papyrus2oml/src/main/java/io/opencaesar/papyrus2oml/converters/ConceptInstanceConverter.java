@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import java.util.List;
@@ -29,18 +46,18 @@ public class ConceptInstanceConverter {
 		String instanceIri = UmlUtils.getIRI(description, element);
 		Member instance = null;
 		if (context.conversionType==ConversionType.dsl) {
-			instance = context.writer.addConceptInstance(description,  UmlUtils.getName(element));
+			instance = context.builder.addConceptInstance(description,  UmlUtils.getName(element));
 		}else if (!types.isEmpty() || !stereotypes.isEmpty()){
 			instanceIri = UmlUtils.getUMLIRI(element, context);
 			String ontIri = UmlUtils.getUMLONTIRI(element, context);
-			OMLUtil.addExtendsIfNeeded(description, ontIri, context.writer);
+			OMLUtil.addExtendsIfNeeded(description, ontIri, context.builder);
 			instance = OmlRead.getMemberByIri(description, instanceIri);
 		}
 		
 		if (instance!=null) {
 			context.umlToOml.put(element, instance);
 			for (Member t : types) {
-				context.writer.addConceptTypeAssertion(description, instanceIri, OmlRead.getIri(t));
+				context.builder.addConceptTypeAssertion(description, instanceIri, t.getIri());
 			}
 		
 			// get the stereoType applications
@@ -110,13 +127,13 @@ public class ConceptInstanceConverter {
 	private static void addLink(Description description, ConversionContext context, String instanceIri, Object val, String propIRI) {
 		context.deferredLinks.add(new LinkConverter(description, instanceIri, propIRI, val, context ));
 		String ontIRI = UmlUtils.getOntIRI(propIRI);
-		OMLUtil.addUsesIfNeeded(description, ontIRI, context.writer);
+		OMLUtil.addUsesIfNeeded(description, ontIRI, context.builder);
 	}
 
 	private static void addScalarProperty(Description description, ConversionContext context, String instanceIri,
 			String propIRI, Object value) {
 		Literal literal = context.getLiteralValue(description, value);
-		context.writer.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
+		context.builder.addScalarPropertyValueAssertion(description, instanceIri, propIRI, literal);
 	}
 	
 }

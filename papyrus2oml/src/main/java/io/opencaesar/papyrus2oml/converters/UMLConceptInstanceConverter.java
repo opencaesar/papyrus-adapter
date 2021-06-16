@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import org.eclipse.emf.common.util.EList;
@@ -12,7 +29,6 @@ import io.opencaesar.oml.ConceptInstance;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.Member;
-import io.opencaesar.oml.util.OmlRead;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
 import io.opencaesar.papyrus2oml.util.UmlUtils;
@@ -22,11 +38,11 @@ public class UMLConceptInstanceConverter {
 	public static void convert(Element element, Member type,ConversionContext context ) {
 		// attributes in this case are the properties of the element.eClass
 		Description description = (Description) context.umlToOml.get(element.getNearestPackage());
-		ConceptInstance instance = context.writer.addConceptInstance(description, UmlUtils.getName(element));
-		String instanceIRI = OmlRead.getIri(instance);
-		context.writer.addConceptTypeAssertion(description, instanceIRI, OmlRead.getIri(type));
+		ConceptInstance instance = context.builder.addConceptInstance(description, UmlUtils.getName(element));
+		String instanceIRI = instance.getIri();
+		context.builder.addConceptTypeAssertion(description, instanceIRI, type.getIri());
 		context.umlToOml.put(element, instance);
-		OMLUtil.addUsesIfNeeded(description,  OmlRead.getOntology(type).getIri(), context.writer);	
+		OMLUtil.addUsesIfNeeded(description,  type.getOntology().getIri(), context.builder);	
 		createAttributes(element, context, description, instanceIRI);
 		createReferences(element, context, description, instanceIRI);
 	}
@@ -81,7 +97,7 @@ public class UMLConceptInstanceConverter {
 	private static void createProperty(ConversionContext context, Description description, String instanceIRI,
 			String propIRI, Object value) {
 		Literal literal = context.getLiteralValue(description, value);
-		context.writer.addScalarPropertyValueAssertion(description,  instanceIRI, propIRI, literal);
+		context.builder.addScalarPropertyValueAssertion(description,  instanceIRI, propIRI, literal);
 	}
 
 	private static String getIri(EStructuralFeature feature) {

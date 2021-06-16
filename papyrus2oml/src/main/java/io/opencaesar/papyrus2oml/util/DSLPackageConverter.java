@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.util;
 
 import java.io.IOException;
@@ -12,7 +29,7 @@ import org.eclipse.uml2.uml.Profile;
 import org.eclipse.uml2.uml.ProfileApplication;
 
 import io.opencaesar.oml.util.OmlCatalog;
-import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.papyrus2oml.ConversionType;
 import io.opencaesar.papyrus2oml.converters.NamedInstanceConverter;
 import io.opencaesar.papyrus2oml.converters.PackageConverter;
@@ -21,8 +38,8 @@ import io.opencaesar.papyrus2oml.converters.ProfileApplicationConverter;
 public class DSLPackageConverter extends ResourceConverter {
 	
 	public DSLPackageConverter(Package rootPackage, Profile profile, List<String> ignoredIriPrefixes, OmlCatalog catalog,
-			OmlWriter writer, ResourceSet rs, ConversionType conversionType, Logger logger) {
-		super(new ConversionContext(ignoredIriPrefixes, catalog, writer, rs,conversionType, logger));
+			OmlBuilder builder, ResourceSet rs, ConversionType conversionType, Logger logger) {
+		super(new ConversionContext(ignoredIriPrefixes, catalog, builder, rs,conversionType, logger));
 		context.rootPackage = rootPackage;
 		context.DSL =true;
 		logger.info("DLS converter in : " + (conversionType==ConversionType.dsl? " DSL mode" : "UML-DSL model"));
