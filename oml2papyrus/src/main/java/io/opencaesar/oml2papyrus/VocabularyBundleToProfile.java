@@ -105,7 +105,6 @@ public class VocabularyBundleToProfile {
 	static {
 		vocsToSkip.add(UmlUtils.TYPES_IRI);
 		vocsToSkip.add(UmlUtils.UML_IRI);
-		vocsToSkip.add(UmlUtils.UML_ANNOTATIONS_IRI);
 	}
 
 	public VocabularyBundleToProfile(VocabularyBundle rootOntology, File outputFolder, ResourceSet outputResourceSet,
