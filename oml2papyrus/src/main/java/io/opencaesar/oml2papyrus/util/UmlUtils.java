@@ -31,7 +31,6 @@ public class UmlUtils {
 
 	public static final String TYPES_IRI = "http://www.eclipse.org/uml2/5.0.0/Types";
 	public static final String UML_IRI = "http://www.eclipse.org/uml2/5.0.0/UML";
-	public static final String UML_ANNOTATIONS_IRI = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations";
 
 	private static final String IRI = "iri";
 	private static final String NAME = "name";
