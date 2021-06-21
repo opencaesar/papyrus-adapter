@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import java.io.IOException;
@@ -23,7 +40,7 @@ public class ProfileApplicationConverter {
 		String iri = UmlUtils.getIRI(profile);
 		if (iri != null && !iri.isEmpty()) {
 			if (context.conversionType == ConversionType.uml_dsl) {
-				context.writer.addDescriptionBundleUsage(context.descriptionBundle, iri, null);
+				context.builder.addDescriptionBundleUsage(context.descriptionBundle, iri, null);
 			} else {
 				Resource resource = context.descriptionBundle.eResource();
 				URI uri = OmlRead.getResolvedUri(resource, URI.createURI(iri));
@@ -36,7 +53,7 @@ public class ProfileApplicationConverter {
 							for (Import i : bundle.getOwnedImports()) {
 								if (i instanceof VocabularyBundleExtension) {
 									if (!i.getUri().equals(UmlUtils.UML_BUNDLE_IRI)) {
-										context.writer.addDescriptionBundleUsage(context.descriptionBundle, i.getUri(), null);
+										context.builder.addDescriptionBundleUsage(context.descriptionBundle, i.getUri(), null);
 									}
 								}
 							}

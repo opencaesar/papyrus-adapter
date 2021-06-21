@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.util;
 
 import java.io.IOException;
@@ -28,7 +45,7 @@ import io.opencaesar.oml.Vocabulary;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlConstants;
 import io.opencaesar.oml.util.OmlRead;
-import io.opencaesar.oml.util.OmlWriter;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.papyrus2oml.ConversionType;
 
 public abstract class ResourceConverter {
@@ -36,7 +53,7 @@ public abstract class ResourceConverter {
 	public static class ConversionContext {
 		public List<String> ignoredIriPrefixes;
 		public OmlCatalog catalog;
-		public OmlWriter writer;
+		public OmlBuilder builder;
 		public Logger logger;
 		public List<Runnable> deferredRelations = new ArrayList<>();
 		public List<Runnable> deferredLinks = new ArrayList<>();
@@ -48,15 +65,15 @@ public abstract class ResourceConverter {
 		public String postFix = "";
 		public boolean DSL = false;
 
-		public ConversionContext(OmlCatalog cat, OmlWriter writer, ConversionType conversionType, Logger logger) {
+		public ConversionContext(OmlCatalog cat, OmlBuilder builder, ConversionType conversionType, Logger logger) {
 			this.catalog = cat;
-			this.writer = writer;
+			this.builder = builder;
 			this.logger = logger;
 			this.conversionType = conversionType;
 		}
 		
-		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlWriter writer, ResourceSet rs, ConversionType conversionType, Logger logger) {
-			this(cat,writer,conversionType,logger);
+		public ConversionContext(List<String> ignoredIriPrefixes, OmlCatalog cat, OmlBuilder builder, ResourceSet rs, ConversionType conversionType, Logger logger) {
+			this(cat,builder,conversionType,logger);
 			this.ignoredIriPrefixes = ignoredIriPrefixes;
 			try {
 				final URI umlUri = URI.createURI(catalog.resolveURI(UmlUtils.UML_IRI) + "." + OmlConstants.OML_EXTENSION);
@@ -84,7 +101,7 @@ public abstract class ResourceConverter {
 			var ontologyUri = OmlRead.getResolvedUri(bundleResource, URI.createURI(pkg.getURI()));
 			Resource ontologyResource = bundleResource.getResourceSet().getResource(ontologyUri, true);
 			Ontology ontology = OmlRead.getOntology(ontologyResource);
-			return OmlRead.getNamespace(ontology) + UmlUtils.getName(element);
+			return ontology.getNamespace() + UmlUtils.getName(element);
 		}
 
 		public Member getUmlOmlElementByName(String name) {
@@ -101,17 +118,17 @@ public abstract class ResourceConverter {
 		
 		public Literal getLiteralValue(Description description, Object val) {
 			if (val instanceof Integer) {
-				return writer.createIntegerLiteral(description, (int)val);
+				return builder.createIntegerLiteral((int)val);
 			} else if (val instanceof Double) {
-				return writer.createQuotedLiteral(description, val.toString(), OmlConstants.XSD_NS+"double", null);
+				return builder.createQuotedLiteral(description, val.toString(), OmlConstants.XSD_NS+"double", null);
 			} else if (val instanceof Boolean) {
-				return writer.createBooleanLiteral(description, (boolean)val);
+				return builder.createBooleanLiteral((boolean)val);
 			} else if (val instanceof EEnumLiteral) {
-				return writer.createQuotedLiteral(description, ((EEnumLiteral)val).getLiteral(),null,null);
+				return builder.createQuotedLiteral(null, ((EEnumLiteral)val).getLiteral(),null,null);
 			} else if (val instanceof Enumerator ) {
-				return writer.createQuotedLiteral(description, ((Enumerator)val).getLiteral(),null,null);
+				return builder.createQuotedLiteral(null, ((Enumerator)val).getLiteral(),null,null);
 			}
-			return writer.createQuotedLiteral(description, (String)val,null,null);
+			return builder.createQuotedLiteral(null, (String)val,null,null);
 		}
 	}
 

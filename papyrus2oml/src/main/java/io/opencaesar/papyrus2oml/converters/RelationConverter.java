@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import java.util.ArrayList;
@@ -51,18 +68,18 @@ public class RelationConverter implements Runnable {
 			if (element instanceof Association) {
 				sources = getAssociationEnds((Association)element, context, description, true);
 				targets = getAssociationEnds((Association)element, context, description, false);
-			}else {
+			} else {
 				String sourceName = getFeatureName(element, true, context);
 				String targetName = getFeatureName(element, false, context);
 				sources = extractValues(element, context, description, sourceName);
 				targets = extractValues(element, context, description, targetName);
 			}
-			instance = context.writer.addRelationInstance(description, UmlUtils.getName(element), sources,targets);
-			instanceIri = OmlRead.getIri(instance);
+			instance = context.builder.addRelationInstance(description, UmlUtils.getName(element), sources, targets);
+			instanceIri = instance.getIri();
 		}else if (!types.isEmpty()){
 			instanceIri = UmlUtils.getUMLIRI(element, context);
 			String ontIri = UmlUtils.getUMLONTIRI(element, context);
-			OMLUtil.addExtendsIfNeeded(description, ontIri, context.writer);
+			OMLUtil.addExtendsIfNeeded(description, ontIri, context.builder);
 			instance = OmlRead.getMemberByIri(description, instanceIri);
 		}
 		
@@ -70,7 +87,7 @@ public class RelationConverter implements Runnable {
 
 		int index = 0;
 		for (Member t : types) {
-			context.writer.addRelationTypeAssertion(description, instanceIri, OmlRead.getIri(t));
+			context.builder.addRelationTypeAssertion(description, instanceIri, t.getIri());
 			Stereotype st = stereotypes.get(index);
 			EObject stApp = element.getStereotypeApplication(st);
 			EClass eClass = stApp.eClass();
@@ -96,17 +113,17 @@ public class RelationConverter implements Runnable {
 	private String getIRI(Property property) {
 		Type value = property.getType();
 		IdentifiedElement e = context.umlToOml.get(value);
-		OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
-		return OmlRead.getIri(e);
+		OMLUtil.addExtendsIfNeeded(description, e.getOntology().getIri(), context.builder);
+		return e.getIri();
 	}
 
 	private static String getFeatureName(Element element, boolean source, ConversionContext context) {
-		Member umlOmlElement = context.getUmlOmlElementByName(element.eClass().getName());
+		RelationEntity entity = (RelationEntity) context.getUmlOmlElementByName(element.eClass().getName());
 		Member namedMember = null;
 		if (source) {
-			namedMember = ((RelationEntity) umlOmlElement).getSourceRelation();
+			namedMember = OMLUtil.getSourceRelation(entity, context);
 		} else {
-			namedMember = ((RelationEntity) umlOmlElement).getTargetRelation();
+			namedMember = OMLUtil.getTargetRelation(entity, context);
 		}
 		return namedMember.getName().split("_")[1];
 	}
@@ -127,8 +144,8 @@ public class RelationConverter implements Runnable {
 			if (e==null) {
 				e = context.getOmlElementForIgnoredElement((Element)value, description) ;
 			}
-			result.add(OmlRead.getIri(e));
-			OMLUtil.addExtendsIfNeeded(description, OmlRead.getOntology(e).getIri(), context.writer);
+			result.add(e.getIri());
+			OMLUtil.addExtendsIfNeeded(description, e.getOntology().getIri(), context.builder);
 		}
 		return result;
 	}

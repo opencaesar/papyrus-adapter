@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.papyrus2oml.converters;
 
 import java.io.IOException;
@@ -28,12 +45,12 @@ public class PackageConverter {
 			String calcuatedPostFix = postFix.isEmpty() ? "" : ("-" + postFix);
 			iri += calcuatedPostFix;
 			final URI uri = URI.createURI(context.catalog.resolveURI(iri) + "." + OmlConstants.OML_EXTENSION);
-			Description description = context.writer.createDescription(uri, iri, SeparatorKind.HASH, prefix+calcuatedPostFix);
+			Description description = context.builder.createDescription(uri, iri, SeparatorKind.HASH, prefix+calcuatedPostFix);
 			context.umlToOml.put(package_, description);
 
-			context.writer.addDescriptionUsage(description, OmlConstants.OWL_IRI, null);
+			context.builder.addDescriptionUsage(description, OmlConstants.OWL_IRI, null);
 			if(context.descriptionBundle!=null) {
-				context.writer.addDescriptionBundleInclusion(context.descriptionBundle, iri, null);
+				context.builder.addDescriptionBundleInclusion(context.descriptionBundle, iri, null);
 			}
 		}
 	}
@@ -50,10 +67,10 @@ public class PackageConverter {
 		iri = empty ? iri + calcuatedPostFix : iri + "-bundle";
 		final URI uri = URI.createURI(context.catalog.resolveURI(iri) +   "." + OmlConstants.OML_EXTENSION);
 		if (context.conversionType != ConversionType.uml_dsl || context.DSL) {
-			DescriptionBundle bundle = context.writer.createDescriptionBundle(uri, iri, SeparatorKind.HASH, prefix + calcuatedPostFix);
+			DescriptionBundle bundle = context.builder.createDescriptionBundle(uri, iri, SeparatorKind.HASH, prefix + calcuatedPostFix);
 			context.descriptionBundle = bundle;
 			if (context.conversionType == ConversionType.uml) {
-				context.writer.addDescriptionBundleUsage(bundle, UmlUtils.UML_BUNDLE_IRI, null);
+				context.builder.addDescriptionBundleUsage(bundle, UmlUtils.UML_BUNDLE_IRI, null);
 			}
 		}
 		if (!empty) {

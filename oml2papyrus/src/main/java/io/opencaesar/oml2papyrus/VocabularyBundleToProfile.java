@@ -1,3 +1,20 @@
+/**
+ * 
+ * Copyright 2021 Modelware Solutions and CAE-LIST.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * 
+ */
 package io.opencaesar.oml2papyrus;
 
 import java.io.File;
@@ -45,7 +62,6 @@ import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.PropertyRestrictionAxiom;
-import io.opencaesar.oml.QuotedLiteral;
 import io.opencaesar.oml.RangeRestrictionKind;
 import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationCardinalityRestrictionAxiom;
@@ -73,7 +89,8 @@ import io.opencaesar.oml2papyrus.util.UmlUtils;
 
 public class VocabularyBundleToProfile {
 
-	private static final String IS_STEREOTYPE_OF = "http://www.eclipse.org/uml2/5.0.0/UML-Annotations#isStereotypeOf";
+	private static final String CONCEPT_POSTFIX = "_Concept";
+	private static final String RELATION_POSTFIX = "_Relation";
 
 	private VocabularyBundle rootOntology;
 	private File outputFolder;
@@ -86,9 +103,8 @@ public class VocabularyBundleToProfile {
 
 	private static Set<String> vocsToSkip = new HashSet<>();
 	static {
-		vocsToSkip.add("http://www.eclipse.org/uml2/5.0.0/Types");
-		vocsToSkip.add("http://www.eclipse.org/uml2/5.0.0/UML");
-		vocsToSkip.add("http://www.eclipse.org/uml2/5.0.0/UML-Annotations");
+		vocsToSkip.add(UmlUtils.TYPES_IRI);
+		vocsToSkip.add(UmlUtils.UML_IRI);
 	}
 
 	public VocabularyBundleToProfile(VocabularyBundle rootOntology, File outputFolder, ResourceSet outputResourceSet,
@@ -147,7 +163,7 @@ public class VocabularyBundleToProfile {
 
 	private void populateProfile(Profile profile) {
 
-		List<Vocabulary> allVoc = OmlRead.getAllImportedOntologies(rootOntology).stream()
+		List<Vocabulary> allVoc = OmlRead.getAllImportedOntologies(rootOntology, false).stream()
 				.filter(ontology ->  {
 					return ontology instanceof Vocabulary && !isFiltered((Vocabulary)ontology);
 				} )
@@ -203,10 +219,10 @@ public class VocabularyBundleToProfile {
 	private void convertAnnotations(Element umlElement, AnnotatedElement omlElement) {
 		List<Annotation> annotations = OmlSearch.findAnnotations(omlElement);
 		for (Annotation annotation : annotations) {
-			if (OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.DC_NS+"description") ||
-				OmlRead.getIri(annotation.getProperty()).equals(OmlConstants.RDFS_NS+"comment")) {
+			if (annotation.getProperty().getIri().equals(OmlConstants.DC_NS+"description") ||
+				annotation.getProperty().getIri().equals(OmlConstants.RDFS_NS+"comment")) {
 				Comment comment = umlElement.createOwnedComment();
-				comment.setBody(OmlRead.getLexicalValue(annotation.getValue()));
+				comment.setBody(OmlRead.getStringValue(annotation.getValue()));
 			}
 		}
 	}
@@ -294,7 +310,7 @@ public class VocabularyBundleToProfile {
 		convertAnnotations(umlEnum, enumType);
 
 		literals.forEach(literal -> {
-			EnumerationLiteral umlLiteral = umlEnum.createOwnedLiteral(OmlRead.getLexicalValue(literal));
+			EnumerationLiteral umlLiteral = umlEnum.createOwnedLiteral(OmlRead.getStringValue(literal));
 			UmlUtils.addNameAnnotationIfNeeded(umlLiteral);
 		});
 
@@ -326,7 +342,7 @@ public class VocabularyBundleToProfile {
 					range = rangeAxiom.getRange();
 				} else if (rest instanceof ScalarPropertyValueRestrictionAxiom) {
 					ScalarPropertyValueRestrictionAxiom valueAxiom = (ScalarPropertyValueRestrictionAxiom)rest;
-					defaultValue = OmlRead.getLexicalValue(valueAxiom.getValue());
+					defaultValue = OmlRead.getStringValue(valueAxiom.getValue());
 				}
 			}
 		}
@@ -336,7 +352,7 @@ public class VocabularyBundleToProfile {
 		if (classifier instanceof Class) {
 			Property umlProperty = ((Class)classifier).createOwnedAttribute(prop.getName(), rangeClass);
 			UmlUtils.addNameAnnotationIfNeeded(umlProperty);
-			String iri = OmlRead.getIri(prop);
+			String iri = prop.getIri();
 			UmlUtils.addIRIAnnotation(umlProperty, iri);
 			convertAnnotations(umlProperty, prop);
 			umlProperty.setLower(lower);
@@ -361,8 +377,8 @@ public class VocabularyBundleToProfile {
 				logger.debug(entity);
 				ReverseRelation srcRel = entity.getReverseRelation();
 				ForwardRelation trgRel = entity.getForwardRelation();
-				String srcRelationIri = srcRel==null ? "" : OmlRead.getIri(srcRel);
-				String targetRelationIri = trgRel==null ? "" : OmlRead.getIri(trgRel);
+				String srcRelationIri = srcRel==null ? "" : srcRel.getIri();
+				String targetRelationIri = trgRel==null ? "" : trgRel.getIri();
 				Entity src = entity.getSource();
 				Entity trgt = entity.getTarget();
 				Class srcClass = (Class) converted.get(src);
@@ -430,9 +446,9 @@ public class VocabularyBundleToProfile {
 		for (Type type : types) {
 			if (type instanceof io.opencaesar.oml.Classifier) {
 				Classifier subClassifier = converted.get(type);
-				List<SpecializableTerm> generalTerms = OmlSearch.findGeneralTerms(type);
+				List<SpecializableTerm> generalTerms = OmlSearch.findSuperTerms(type);
 				for (SpecializableTerm generalTerm : generalTerms) {
-					if (generalTerm instanceof Type) {
+					if (generalTerm instanceof Type && !generalTerm.getOwningVocabulary().getIri().equals(UmlUtils.UML_IRI)) {
 						Classifier generalClassifier = converted.get(generalTerm);
 						
 						Generalization gen = subClassifier.createGeneralization(generalClassifier);
@@ -461,7 +477,7 @@ public class VocabularyBundleToProfile {
 							if (relation instanceof ReverseRelation) {
 								reverse = true;
 							}
-							RelationEntity relEntity = OmlRead.getRelationEntity( rangeRest.getRelation());
+							RelationEntity relEntity = rangeRest.getRelation().getRelationEntity();
 							Entity newRange = rangeRest.getRange();
 							AssociationInfo info = relationToAssociationInfo.get(relEntity);	
 							Classifier src = converted.get(entity);
@@ -645,12 +661,18 @@ public class VocabularyBundleToProfile {
 
 	private StereoTypesInfo getStereoTypeInfo(Vocabulary voc, Entity entity) {
 		StereoTypesInfo infoHolder = new StereoTypesInfo(voc, entity);
-		List<Literal> values = OmlSearch.findAnnotationValuesForIri(entity, IS_STEREOTYPE_OF);
-		for (Literal value : values) {
-			if (value instanceof QuotedLiteral) {
-				QuotedLiteral qLiteral = (QuotedLiteral) value;
-				String sValue = qLiteral.getValue();
-				infoHolder.addMetaClass(sValue.substring(sValue.indexOf(':') + 1));
+		
+		//List<Literal> values = OmlSearch.findAnnotationValuesForIri(entity, IS_STEREOTYPE_OF);
+		List<SpecializableTerm> generals = OmlSearch.findSuperTerms(entity);
+		for (SpecializableTerm general : generals) {
+			if (general.getOwningVocabulary().getIri().equals(UmlUtils.UML_IRI)) {
+				String metaclass = general.getName();
+				if (metaclass.endsWith(CONCEPT_POSTFIX)) {
+					metaclass = metaclass.substring(0, metaclass.length() - CONCEPT_POSTFIX.length());
+				} else if (metaclass.endsWith(RELATION_POSTFIX)) {
+					metaclass = metaclass.substring(0, metaclass.length() - RELATION_POSTFIX.length());
+				}
+				infoHolder.addMetaClass(metaclass);
 			}
 		}
 		return infoHolder;
