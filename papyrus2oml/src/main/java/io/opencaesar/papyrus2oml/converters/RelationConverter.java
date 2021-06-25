@@ -32,6 +32,7 @@ import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.Type;
+import org.eclipse.uml2.uml.util.UMLUtil;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -148,7 +149,7 @@ public class RelationConverter implements Runnable {
 	private void checkForPackage(Collection<?> values) {
 		for (Object value : values) {
 			if (value instanceof Package) {
-				throw new UnsupportedOperationException("Can not handle relations with package end yet");
+				throw new UnsupportedOperationException("Skipping relations whose end is a package: "+	UMLUtil.getQualifiedText(element));
 			}
 		}
 	}
