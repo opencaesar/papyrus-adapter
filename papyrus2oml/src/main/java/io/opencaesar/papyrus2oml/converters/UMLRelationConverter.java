@@ -25,6 +25,7 @@ import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Association;
 import org.eclipse.uml2.uml.Element;
 import org.eclipse.uml2.uml.NamedElement;
+import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Type;
 
 import io.opencaesar.oml.Description;
@@ -58,59 +59,62 @@ public class UMLRelationConverter implements Runnable {
 	}
 	
 	private static RelationInstance createInstance(RelationEntity type, Element element, ConversionContext context, Description description) {
-		RelationEntity entity = (RelationEntity) type;
-		
-		List<String> sources = new ArrayList<>();
-		if (element instanceof Association) {
-			Association assoc = (Association) element;
-			Type source = assoc.getMemberEnds().get(0).getType();
-			IdentifiedElement e = context.umlToOml.get(source);
-			sources.add(e.getIri());
-		} else {
-			Relation sourceR = OMLUtil.getSourceRelation(entity, context);
-			while (sourceR == null && !entity.getOwnedSpecializations().isEmpty()) {
-				RelationEntity superEntity = entity.getOwnedSpecializations().stream()
-						.map(s -> s.getSpecializedTerm())
-						.filter(t -> t instanceof RelationEntity)
-						.map(t -> (RelationEntity) t)
-						.findFirst().orElse(null);
-				if (superEntity == null) {
-					break;
+		try {
+			RelationEntity entity = (RelationEntity) type;
+			List<String> sources = new ArrayList<>();
+			if (element instanceof Association) {
+				Association assoc = (Association) element;
+				Type source = assoc.getMemberEnds().get(0).getType();
+				IdentifiedElement e = context.umlToOml.get(source);
+				sources.add(e.getIri());
+			} else {
+				Relation sourceR = OMLUtil.getSourceRelation(entity, context);
+				while (sourceR == null && !entity.getOwnedSpecializations().isEmpty()) {
+					RelationEntity superEntity = entity.getOwnedSpecializations().stream()
+							.map(s -> s.getSpecializedTerm())
+							.filter(t -> t instanceof RelationEntity)
+							.map(t -> (RelationEntity) t)
+							.findFirst().orElse(null);
+					if (superEntity == null) {
+						break;
+					}
+					entity = superEntity;
+					sourceR = OMLUtil.getSourceRelation(entity, context);
 				}
-				entity = superEntity;
-				sourceR = OMLUtil.getSourceRelation(entity, context);
+				sources.addAll(convertElements(element, context, description, sourceR));
 			}
-			sources.addAll(convertElements(element, context, description, sourceR));
-		}
-		
-		List<String> targets = new ArrayList<>();
-		if (element instanceof Association) {
-			Association assoc = (Association) element;
-			Type target = assoc.getMemberEnds().get(1).getType();
-			IdentifiedElement e = context.umlToOml.get(target);
-			targets.add(e.getIri());
-		} else {
-			Relation targetR = OMLUtil.getTargetRelation(entity, context);
-			while (targetR == null && !entity.getOwnedSpecializations().isEmpty()) {
-				RelationEntity superEntity = entity.getOwnedSpecializations().stream()
-						.map(s -> s.getSpecializedTerm())
-						.filter(t -> t instanceof RelationEntity)
-						.map(t -> (RelationEntity) t)
-						.findFirst().orElse(null);
-				if (superEntity == null) {
-					break;
+			List<String> targets = new ArrayList<>();
+			if (element instanceof Association) {
+				Association assoc = (Association) element;
+				Type target = assoc.getMemberEnds().get(1).getType();
+				IdentifiedElement e = context.umlToOml.get(target);
+				targets.add(e.getIri());
+			} else {
+				Relation targetR = OMLUtil.getTargetRelation(entity, context);
+				while (targetR == null && !entity.getOwnedSpecializations().isEmpty()) {
+					RelationEntity superEntity = entity.getOwnedSpecializations().stream()
+							.map(s -> s.getSpecializedTerm())
+							.filter(t -> t instanceof RelationEntity)
+							.map(t -> (RelationEntity) t)
+							.findFirst().orElse(null);
+					if (superEntity == null) {
+						break;
+					}
+					entity = superEntity;
+					targetR = OMLUtil.getTargetRelation(entity, context);
 				}
-				entity = superEntity;
-				targetR = OMLUtil.getTargetRelation(entity, context);
+				targets = convertElements(element, context, description, targetR);
 			}
-			targets = convertElements(element, context, description, targetR);
+			RelationInstance instance = context.builder.addRelationInstance(description,  UmlUtils.getName(element), sources, targets);
+			context.builder.addRelationTypeAssertion(description, instance.getIri(), type.getIri());
+			UMLConceptInstanceConverter.createAttributes(element, context, description, instance.getIri());
+			UMLConceptInstanceConverter.createReferences(element, context, description, instance.getIri());
+			context.umlToOml.put(element, instance);
+			return instance;
+		} catch (UnsupportedOperationException exp) {
+			context.logger.warn(exp.getMessage());
+			return null;
 		}
-		RelationInstance instance = context.builder.addRelationInstance(description,  UmlUtils.getName(element), sources, targets);
-		context.builder.addRelationTypeAssertion(description, instance.getIri(), type.getIri());
-		UMLConceptInstanceConverter.createAttributes(element, context, description, instance.getIri());
-		UMLConceptInstanceConverter.createReferences(element, context, description, instance.getIri());
-		context.umlToOml.put(element, instance);
-		return instance;
 	}
 
 	private static List<String> convertElements(Element element, ConversionContext context, Description description, Relation relation) {
@@ -121,6 +125,9 @@ public class UMLRelationConverter implements Runnable {
 			Object values = element.eGet(f);
 			if (values instanceof Collection<?>) {
 				for (Object value : ((Collection<?>) values)) {
+					if (value instanceof Package) {
+						throw new UnsupportedOperationException("Can not handle relations with package end yet");
+					}
 					IdentifiedElement e = context.umlToOml.get(value);
 					if (e==null) {
 						e = context.getOmlElementForIgnoredElement((Element)value, description) ;
@@ -138,6 +145,9 @@ public class UMLRelationConverter implements Runnable {
 					OMLUtil.addExtendsIfNeeded(description, ont.getIri(), context.builder);
 				}
 			} else {
+				if (values instanceof Package) {
+					throw new UnsupportedOperationException("Can not handle relations with package end yet");
+				}
 				IdentifiedElement e = context.umlToOml.get(values);
 				if (e==null) {
 					e = context.getOmlElementForIgnoredElement((Element)values, description) ;

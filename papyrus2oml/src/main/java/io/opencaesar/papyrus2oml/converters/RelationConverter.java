@@ -28,9 +28,11 @@ import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EStructuralFeature;
 import org.eclipse.uml2.uml.Association;
 import org.eclipse.uml2.uml.Element;
+import org.eclipse.uml2.uml.Package;
 import org.eclipse.uml2.uml.Property;
 import org.eclipse.uml2.uml.Stereotype;
 import org.eclipse.uml2.uml.Type;
+import org.eclipse.uml2.uml.util.UMLUtil;
 
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.IdentifiedElement;
@@ -60,41 +62,46 @@ public class RelationConverter implements Runnable {
 
 	@Override
 	public void run() {
-		String instanceIri= "";
-		Member instance = null;
-		if (context.conversionType!=ConversionType.uml_dsl) {
-			List<String> sources = null;
-			List<String> targets = null;
-			if (element instanceof Association) {
-				sources = getAssociationEnds((Association)element, context, description, true);
-				targets = getAssociationEnds((Association)element, context, description, false);
-			} else {
-				String sourceName = getFeatureName(element, true, context);
-				String targetName = getFeatureName(element, false, context);
-				sources = extractValues(element, context, description, sourceName);
-				targets = extractValues(element, context, description, targetName);
+		try {
+			canHandleRelation();
+			String instanceIri= "";
+			Member instance = null;
+			if (context.conversionType!=ConversionType.uml_dsl) {
+				List<String> sources = null;
+				List<String> targets = null;
+				if (element instanceof Association) {
+					sources = getAssociationEnds((Association)element, context, description, true);
+					targets = getAssociationEnds((Association)element, context, description, false);
+				} else {
+					String sourceName = getFeatureName(element, true, context);
+					String targetName = getFeatureName(element, false, context);
+					sources = extractValuesIRIs(element, context, description, sourceName);
+					targets = extractValuesIRIs(element, context, description, targetName);
+				}
+				instance = context.builder.addRelationInstance(description, UmlUtils.getName(element), sources, targets);
+				instanceIri = instance.getIri();
+			}else if (!types.isEmpty()){
+				instanceIri = UmlUtils.getUMLIRI(element, context);
+				String ontIri = UmlUtils.getUMLONTIRI(element, context);
+				OMLUtil.addExtendsIfNeeded(description, ontIri, context.builder);
+				instance = OmlRead.getMemberByIri(description, instanceIri);
 			}
-			instance = context.builder.addRelationInstance(description, UmlUtils.getName(element), sources, targets);
-			instanceIri = instance.getIri();
-		}else if (!types.isEmpty()){
-			instanceIri = UmlUtils.getUMLIRI(element, context);
-			String ontIri = UmlUtils.getUMLONTIRI(element, context);
-			OMLUtil.addExtendsIfNeeded(description, ontIri, context.builder);
-			instance = OmlRead.getMemberByIri(description, instanceIri);
+			
+			assert (instance!=null && !instanceIri.isEmpty());
+	
+			int index = 0;
+			for (Member t : types) {
+				context.builder.addRelationTypeAssertion(description, instanceIri, t.getIri());
+				Stereotype st = stereotypes.get(index);
+				EObject stApp = element.getStereotypeApplication(st);
+				EClass eClass = stApp.eClass();
+				ConceptInstanceConverter.createAttributes(description, context, instanceIri, st, stApp, eClass);
+				index++;
+			}
+			context.umlToOml.put(element, instance);
+		}catch (UnsupportedOperationException exp) {
+			context.logger.warn(exp.getMessage());
 		}
-		
-		assert (instance!=null && !instanceIri.isEmpty());
-
-		int index = 0;
-		for (Member t : types) {
-			context.builder.addRelationTypeAssertion(description, instanceIri, t.getIri());
-			Stereotype st = stereotypes.get(index);
-			EObject stApp = element.getStereotypeApplication(st);
-			EClass eClass = stApp.eClass();
-			ConceptInstanceConverter.createAttributes(description, context, instanceIri, st, stApp, eClass);
-			index++;
-		}
-		context.umlToOml.put(element, instance);
 	}
 
 	private List<String> getAssociationEnds(Association association, ConversionContext context2, Description description2,
@@ -127,10 +134,27 @@ public class RelationConverter implements Runnable {
 		}
 		return namedMember.getName().split("_")[1];
 	}
+	
+	private void canHandleRelation() {
+		if (!(element instanceof Association)) {
+			String sourceName = getFeatureName(element, true, context);
+			String targetName = getFeatureName(element, false, context);
+			Collection<?> sources = extractValues(element,sourceName);
+			Collection<?> targets = extractValues(element,targetName);
+			checkForPackage(sources);
+			checkForPackage(targets);
+		}
+	}
+	
+	private void checkForPackage(Collection<?> values) {
+		for (Object value : values) {
+			if (value instanceof Package) {
+				throw new UnsupportedOperationException("Skipping relations whose end is a package: "+	UMLUtil.getQualifiedText(element));
+			}
+		}
+	}
 
-	private List<String> extractValues(Element element, ConversionContext context, Description description,
-			String featureName) {
-		List<String> result = new ArrayList<>();
+	private Collection<?> extractValues(Element element, String featureName) {
 		EStructuralFeature f = element.eClass().getEStructuralFeature(featureName);
 		Object values = element.eGet(f);
 		Collection<?> valueAsCollection = null;
@@ -139,6 +163,13 @@ public class RelationConverter implements Runnable {
 		} else {
 			valueAsCollection = Collections.singleton(values);
 		}
+		return valueAsCollection;
+	}
+
+	private List<String> extractValuesIRIs(Element element, ConversionContext context, Description description,
+			String featureName) {
+		List<String> result = new ArrayList<>();
+		Collection<?> valueAsCollection = extractValues(element, featureName);
 		for (Object value : valueAsCollection) {
 			IdentifiedElement e = context.umlToOml.get(value);
 			if (e==null) {
