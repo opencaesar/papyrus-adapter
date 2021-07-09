@@ -58,6 +58,8 @@ import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionBundle;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
+import io.opencaesar.oml.Feature;
+import io.opencaesar.oml.FeaturePredicate;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Instance;
 import io.opencaesar.oml.LinkAssertion;
@@ -65,7 +67,6 @@ import io.opencaesar.oml.NamedInstance;
 import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationEntity;
 import io.opencaesar.oml.RelationInstance;
-import io.opencaesar.oml.RelationPredicate;
 import io.opencaesar.oml.RelationTypeAssertion;
 import io.opencaesar.oml.Rule;
 import io.opencaesar.oml.ScalarProperty;
@@ -244,17 +245,17 @@ public class DescriptionBundleToModel {
 		Entity entity = getUMLEntityByName(eClass.getName());
 		if (entity instanceof RelationEntity) {
 			Rule rule = getUMLRuleByName(eClass.getName()+"_Rule");
-			Relation sourceRel = ((RelationPredicate)rule.getConsequent().get(0)).getRelation();
-			String sourceName = getNamefromAnnotation(sourceRel);
-			Relation targetRel = ((RelationPredicate)rule.getConsequent().get(1)).getRelation();
-			String targetName = getNamefromAnnotation(targetRel);
-			EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
-			EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
-			if (sourceFeature==null || targetFeature==null) {
+			Feature sourceFeature = ((FeaturePredicate)rule.getConsequent().get(0)).getFeature();
+			String sourceName = getNamefromAnnotation(sourceFeature);
+			Feature targetFeature = ((FeaturePredicate)rule.getConsequent().get(1)).getFeature();
+			String targetName = getNamefromAnnotation(targetFeature);
+			EStructuralFeature sourceStrcucturalFeature = element.eClass().getEStructuralFeature(sourceName);
+			EStructuralFeature targetStructuralFeature = element.eClass().getEStructuralFeature(targetName);
+			if (sourceStrcucturalFeature==null || targetStructuralFeature==null) {
 				logger.error("Error: converting relation");
 			}
-			setFeatureValue(sourceFeature,element,sources);
-			setFeatureValue(targetFeature,element,targets);
+			setFeatureValue(sourceStrcucturalFeature, element,sources);
+			setFeatureValue(targetStructuralFeature, element,targets);
 		}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
 			setAssociationDetails((Association)element,sources, targets);
 		}
@@ -355,14 +356,14 @@ public class DescriptionBundleToModel {
 			Entity entity = getUMLEntityByName(eClass.getName());
 			if (entity instanceof RelationEntity) {
 				Rule rule = getUMLRuleByName(eClass.getName()+"_Rule");
-				Relation sourceRel = ((RelationPredicate)rule.getConsequent().get(0)).getRelation();
-				String sourceName = getNamefromAnnotation(sourceRel);
-				Relation targetRel = ((RelationPredicate)rule.getConsequent().get(1)).getRelation();
-				String targetName = getNamefromAnnotation(targetRel);
-				EStructuralFeature sourceFeature = element.eClass().getEStructuralFeature(sourceName);
-				EStructuralFeature targetFeature = element.eClass().getEStructuralFeature(targetName);
-				setFeatureValue(sourceFeature,element,Collections.singletonList(source));
-				setFeatureValue(targetFeature,element,Collections.singletonList(target));
+				Feature sourceFeature = ((FeaturePredicate)rule.getConsequent().get(0)).getFeature();
+				String sourceName = getNamefromAnnotation(sourceFeature);
+				Feature targetFeature = ((FeaturePredicate)rule.getConsequent().get(1)).getFeature();
+				String targetName = getNamefromAnnotation(targetFeature);
+				EStructuralFeature sourceStructuralFeature = element.eClass().getEStructuralFeature(sourceName);
+				EStructuralFeature targetStructuralFeature = element.eClass().getEStructuralFeature(targetName);
+				setFeatureValue(sourceStructuralFeature,element,Collections.singletonList(source));
+				setFeatureValue(targetStructuralFeature,element,Collections.singletonList(target));
 			}else if (eClass.getClassifierID() == UMLPackage.ASSOCIATION) {
 				setAssociationDetails((Association)element,Collections.singletonList(source), Collections.singletonList(target));
 			}

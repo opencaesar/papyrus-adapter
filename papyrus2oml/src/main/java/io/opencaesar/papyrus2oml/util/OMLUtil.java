@@ -22,10 +22,10 @@ import java.util.List;
 import io.opencaesar.oml.Description;
 import io.opencaesar.oml.DescriptionExtension;
 import io.opencaesar.oml.DescriptionUsage;
+import io.opencaesar.oml.FeaturePredicate;
 import io.opencaesar.oml.Import;
 import io.opencaesar.oml.Relation;
 import io.opencaesar.oml.RelationEntity;
-import io.opencaesar.oml.RelationPredicate;
 import io.opencaesar.oml.Rule;
 import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.papyrus2oml.util.ResourceConverter.ConversionContext;
@@ -34,12 +34,12 @@ public class OMLUtil {
 
 	static public Relation getSourceRelation(RelationEntity entity, ConversionContext context) {
 		Rule rule = (Rule) context.getUmlOmlElementByName(entity.getName()+"_Rule");
-		return (rule != null) ? ((RelationPredicate)rule.getConsequent().get(0)).getRelation() : null;
+		return (rule != null) ? (Relation)((FeaturePredicate)rule.getConsequent().get(0)).getFeature() : null;
 	}
 		
 	static public Relation getTargetRelation(RelationEntity entity, ConversionContext context) {
 		Rule rule = (Rule) context.getUmlOmlElementByName(entity.getName()+"_Rule");
-		return (rule != null) ? ((RelationPredicate)rule.getConsequent().get(1)).getRelation() : null;
+		return (rule != null) ? (Relation)((FeaturePredicate)rule.getConsequent().get(1)).getFeature() : null;
 	}
 
 	static public boolean shouldIgnoreIri(List<String> ignoredIriPrefixes, String iri) {

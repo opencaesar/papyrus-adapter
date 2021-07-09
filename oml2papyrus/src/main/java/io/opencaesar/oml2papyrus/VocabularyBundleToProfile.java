@@ -58,7 +58,6 @@ import io.opencaesar.oml.CardinalityRestrictionKind;
 import io.opencaesar.oml.Entity;
 import io.opencaesar.oml.EnumeratedScalar;
 import io.opencaesar.oml.FacetedScalar;
-import io.opencaesar.oml.FeatureProperty;
 import io.opencaesar.oml.ForwardRelation;
 import io.opencaesar.oml.Literal;
 import io.opencaesar.oml.PropertyRestrictionAxiom;
@@ -75,6 +74,7 @@ import io.opencaesar.oml.ScalarPropertyCardinalityRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRangeRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyRestrictionAxiom;
 import io.opencaesar.oml.ScalarPropertyValueRestrictionAxiom;
+import io.opencaesar.oml.SemanticProperty;
 import io.opencaesar.oml.SpecializableTerm;
 import io.opencaesar.oml.Structure;
 import io.opencaesar.oml.StructuredProperty;
@@ -284,8 +284,8 @@ public class VocabularyBundleToProfile {
 		Map<ScalarProperty, List<PropertyRestrictionAxiom>> propToRestirctions = getMappedRestrictions(propRestrictions);
 		
 		// convert the properties
-		List<FeatureProperty> props = OmlSearch.findFeaturePropertiesWithDomain(entity);
-		for (FeatureProperty prop : props){
+		List<SemanticProperty> props = OmlSearch.findSemanticPropertiesWithDomain(entity);
+		for (SemanticProperty prop : props){
 			if (prop instanceof ScalarProperty) {
 				convertProperty(pkg, (ScalarProperty)prop, entity, propToRestirctions);
 				propToRestirctions.remove(prop);

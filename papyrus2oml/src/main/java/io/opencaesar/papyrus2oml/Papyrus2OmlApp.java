@@ -18,10 +18,6 @@
 package io.opencaesar.papyrus2oml;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,6 +28,7 @@ import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.xtext.resource.XtextResourceSet;
 
@@ -40,13 +37,12 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
-import com.google.common.io.CharStreams;
 
 import io.opencaesar.oml.Ontology;
 import io.opencaesar.oml.dsl.OmlStandaloneSetup;
+import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.oml.util.OmlCatalog;
 import io.opencaesar.oml.util.OmlRead;
-import io.opencaesar.oml.util.OmlBuilder;
 import io.opencaesar.oml.util.OmlXMIResourceFactory;
 import io.opencaesar.papyrus2oml.util.OMLUtil;
 
@@ -143,8 +139,7 @@ public class Papyrus2OmlApp {
 		OmlXMIResourceFactory.register();
 		
 		// load the Oml catalog
-		final URL catalogURL = new File(outputCatalogPath).toURI().toURL();
-		final OmlCatalog catalog = OmlCatalog.create(catalogURL);
+		final OmlCatalog catalog = OmlCatalog.create(URI.createFileURI(outputCatalogPath));
 		
 		// create the Oml resource set
 		final XtextResourceSet omlResourceSet = new XtextResourceSet();
@@ -180,16 +175,8 @@ public class Papyrus2OmlApp {
 	 * @return version string from build.properties or UNKNOWN
 	 */
 	private String getAppVersion() {
-		String version = "UNKNOWN";
-		try {
-			final InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream("version.txt");
-			final InputStreamReader reader = new InputStreamReader(input);
-			version = CharStreams.toString(reader);
-		} catch (IOException e) {
-			final String errorMsg = "Could not read version.txt file." + e;
-			LOGGER.error(errorMsg, e);
-		}
-		return version;
+    	var version = this.getClass().getPackage().getImplementationVersion();
+    	return (version != null) ? version : "<SNAPSHOT>";
 	}
 
 	public static class InputFilePath implements IParameterValidator {
